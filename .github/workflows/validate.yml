@@ -23,3 +23,32 @@ jobs:
       - name: Test commit and sync tooling
         shell: powershell
         run: ./tests/test-tooling.ps1
+
+  validate-pwsh-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Validate structure and links
+        shell: pwsh
+        run: ./scripts/check-hub.ps1
+      - name: Test commit and sync tooling
+        shell: pwsh
+        run: ./tests/test-tooling.ps1
+
+  validate-pwsh-ubuntu-experimental:
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Validate structure and links
+        shell: pwsh
+        run: ./scripts/check-hub.ps1
+      - name: Test commit and sync tooling
+        shell: pwsh
+        run: ./tests/test-tooling.ps1

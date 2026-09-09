@@ -2,7 +2,7 @@
 param()
 
 $ErrorActionPreference = 'Stop'
-$powershellExe = (Get-Command powershell.exe -ErrorAction Stop).Source
+$powershellExe = (Get-Process -Id $PID -ErrorAction Stop).Path
 $suites = @(
     'contracts/test-contracts.ps1',
     'sync/test-sync-plan.ps1',

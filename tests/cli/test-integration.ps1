@@ -4,7 +4,7 @@ param()
 $ErrorActionPreference = 'Stop'
 
 $hubRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
-$powershellExe = (Get-Command powershell.exe -ErrorAction Stop).Source
+$powershellExe = (Get-Process -Id $PID -ErrorAction Stop).Path
 $tempBase = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd([char[]]@('\', '/'))
 $tempRoot = Join-Path $tempBase "ai-rules-hub-tests-$([Guid]::NewGuid().ToString('N'))"
 $assertionCount = 0
@@ -113,6 +113,9 @@ try {
     $hubProjectRules = Get-Content -LiteralPath (Join-Path $hubRoot 'hub/PROJECT_RULES.md') -Raw -Encoding UTF8
     $validationWorkflow = Get-Content -LiteralPath (Join-Path $hubRoot '.github/workflows/validate.yml') -Raw -Encoding UTF8
     $hubCheck = Get-Content -LiteralPath (Join-Path $hubRoot 'scripts/check-hub.ps1') -Raw -Encoding UTF8
+    $testEntryPoint = Get-Content -LiteralPath (Join-Path $hubRoot 'tests/test-tooling.ps1') -Raw -Encoding UTF8
+    $testRunner = Get-Content -LiteralPath (Join-Path $hubRoot 'tests/run.ps1') -Raw -Encoding UTF8
+    $syncPlanTest = Get-Content -LiteralPath (Join-Path $hubRoot 'tests/sync/test-sync-plan.ps1') -Raw -Encoding UTF8
     $catalog = Get-Content -LiteralPath (Join-Path $hubRoot 'sync/catalog.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 
     $crlfHubRoot = Join-Path $tempRoot 'crlf hub fixture'
@@ -177,6 +180,8 @@ try {
     Assert-True -Condition ($securityRule -match 'необратимым или высокорисковым действием' -and $securityRule -match 'ещё не охвачено его запросом или согласованным планом' -and $securityRule -match 'изменились объект, получатель, передаваемые данные, область или последствия') -Message 'security approval must be risk-based, respect an already approved exact plan, and require renewed approval when scope changes'
     Assert-True -Condition ($deliveryRule -match '(?m)^## Цепочка поставки\s*$' -and $deliveryRule -match 'граф зависимостей' -and $deliveryRule -match 'Публикуемый артефакт' -and $deliveryRule -match 'пропорциональ') -Message 'delivery rule must structurally cover dependencies, published artifacts, and proportional supply-chain safeguards'
     Assert-True -Condition ($validationWorkflow -match '(?m)^permissions:\s*\r?\n\s+contents:\s*read\s*$' -and $validationWorkflow -match 'actions/checkout@[0-9a-f]{40}' -and $validationWorkflow -match 'persist-credentials:\s*false') -Message 'validation workflow must be read-only and use pinned checkout without persisted credentials'
+    Assert-True -Condition ($validationWorkflow -match 'validate-pwsh-windows:' -and $validationWorkflow -match 'validate-pwsh-ubuntu-experimental:' -and $validationWorkflow -match 'continue-on-error:\s*true' -and ([regex]::Matches($validationWorkflow, 'shell:\s*pwsh')).Count -eq 4) -Message 'validation workflow must run the full pwsh suite on Windows and experimental Ubuntu'
+    Assert-True -Condition ((@($testEntryPoint, $testRunner, $syncPlanTest) | Where-Object { $_ -notmatch 'Get-Process -Id \$PID' -or $_ -match 'Get-Command powershell\.exe' } | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) -Message 'test runners must preserve the current PowerShell host'
     Assert-True -Condition ((Test-Path -LiteralPath (Join-Path $hubRoot 'CONTRIBUTING.md')) -and (Test-Path -LiteralPath (Join-Path $hubRoot '.github/SECURITY.md'))) -Message 'public repository entry points must exist'
     Assert-True -Condition ($hubCheck -match 'LICENSE\.md' -and $hubCheck -match 'GitHub-discoverable CONTRIBUTING' -and $hubCheck -match 'workflows/PROJECT_CONNECT_PROMPT\.md' -and $hubCheck -match 'workflows/PROJECT_AUDIT_PROMPT\.md' -and $hubCheck -match 'full 40-character commit SHA' -and $hubCheck -match 'undesiredEnglishProse') -Message 'hub check must enforce public repository hygiene, onboarding workflows, and one-language prose'
     Assert-True -Condition ($hubCheck -match 'hub/BACKLOG\.md' -and $hubCheck -match "'hub/decisions'" -and $hubCheck -match '\.local-docs/') -Message 'hub check must reject owner-only public documents and require an ignored local location'
