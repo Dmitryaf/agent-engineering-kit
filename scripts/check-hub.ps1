@@ -31,6 +31,10 @@ $requiredPaths = @(
     'workflows/PROJECT_CONNECT_PROMPT.md',
     'workflows/PROJECT_AUDIT_PROMPT.md',
     'workflows/PROJECT_STUDY.md',
+    'evals/README.md',
+    'evals/controls.json',
+    'evals/runs/README.md',
+    'evals/runs/RESULT_TEMPLATE.json',
     'templates/PROJECT_RULES.full.md',
     'sync/README.md',
     'sync/catalog.json',
@@ -56,7 +60,8 @@ $requiredPaths = @(
     'tests/cli/test-integration.ps1',
     'tests/diagnostics/test-project-state.ps1',
     'tests/policy-structure/test-module-boundaries.ps1',
-    'tests/policy-structure/test-portable-boundaries.ps1'
+    'tests/policy-structure/test-portable-boundaries.ps1',
+    'tests/policy-structure/test-evals.ps1'
 )
 
 foreach ($requiredPath in $requiredPaths) {
