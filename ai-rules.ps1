@@ -31,48 +31,44 @@ Import-Module (Join-Path $hubRoot 'src/Diagnostics.psm1') -ErrorAction Stop
 
 function Write-Help {
     @'
-Команды AI Rules Hub
+AI Rules Hub
+
+Подключить проект
+
+  .\ai-rules.ps1 prompt connect -ProjectRoot ПУТЬ
+                           Подготовить запрос для ИИ-агента.
+
+Обновить правила
+
+  .\ai-rules.ps1 update -ProjectRoot ПУТЬ
+                           Показать доступные изменения.
+  .\ai-rules.ps1 update -ProjectRoot ПУТЬ -Apply
+                           Применить показанные изменения.
+
+Проверить
+
+  .\ai-rules.ps1 doctor -ProjectRoot ПУТЬ
+                           Проверить подключение проекта.
+  .\ai-rules.ps1 status -ProjectRoot ПУТЬ
+                           Кратко показать состояние проекта.
+
+Дополнительные команды
 
   help                     Показать эту справку.
-  doctor                   Проверить сам хаб и его рабочее дерево.
-  doctor -ProjectRoot PATH Проверить подключение проекта без изменений.
-  list profiles            Показать профили и их назначение.
-  list topics              Показать темы и их назначение.
-  prompt connect -ProjectRoot PATH
-                           Показать готовый запрос подключения для AI-агента.
-  prompt audit             Показать готовый запрос подключения и аудита.
-  connect -ProjectRoot PATH
-                           Подготовить проект и показать первый Plan.
-  connect -ProjectRoot PATH -Apply
-                           Применить ранее показанный Plan и проверить результат.
-  init   -ProjectRoot PATH Подготовить проект без применения правил.
-  status -ProjectRoot PATH Показать состояние подключения проекта.
-  plan   -ProjectRoot PATH Предварительно показать изменения текущей revision.
-  apply  -ProjectRoot PATH Применить уже закреплённую revision.
-  update -ProjectRoot PATH Показать переход на текущую revision хаба.
-  update -ProjectRoot PATH -Apply
-                           Закрепить текущую revision и применить её.
+  doctor                   Проверить сам хаб.
+  list profiles            Показать доступные профили.
+  list topics              Показать доступные темы.
+  prompt audit             Подготовить запрос для проверки подключения.
+  connect -ProjectRoot ПУТЬ
+                           Подготовить проект и показать изменения.
+  connect -ProjectRoot ПУТЬ -Apply
+                           Применить ранее показанные изменения.
+  init   -ProjectRoot ПУТЬ Подготовить проект без применения правил.
+  plan  -ProjectRoot ПУТЬ Показать изменения для закреплённой версии.
+  apply -ProjectRoot ПУТЬ Применить эти изменения.
 
-Примеры
-
-  .\ai-rules.ps1 list profiles
-  .\ai-rules.ps1 prompt connect -ProjectRoot C:\path\to\project
-  .\ai-rules.ps1 prompt audit
-  .\ai-rules.ps1 connect -ProjectRoot C:\path\to\project -Profiles standard-product
-  .\ai-rules.ps1 connect -ProjectRoot C:\path\to\project -Profiles standard-product -Apply
-  .\ai-rules.ps1 init -ProjectRoot C:\path\to\project -Profiles standard-product
-  .\ai-rules.ps1 doctor -ProjectRoot C:\path\to\project
-  .\ai-rules.ps1 status -ProjectRoot C:\path\to\project
-  .\ai-rules.ps1 plan -ProjectRoot C:\path\to\project
-  .\ai-rules.ps1 update -ProjectRoot C:\path\to\project
-  .\ai-rules.ps1 update -ProjectRoot C:\path\to\project -Apply
-
-plan ничего не меняет и использует revision из manifest.
-apply работает только с уже закреплённой revision.
-update использует текущий checkout хаба и меняет проект только с -Apply.
-connect объединяет init и первый update, но не позволяет пропустить preview.
-
-CLI не выполняет git pull или git fetch автоматически.
+Команды без -Apply только показывают состояние или изменения.
+Хаб не выполняет git pull, git fetch, commit или push.
 '@ | Write-Host
 }
 
