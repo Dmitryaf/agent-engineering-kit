@@ -157,7 +157,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 5. только относящиеся к текущей задаче правила из `.ai-rules/upstream/rules/`;
 6. релевантные проектные документы, код и тесты.
 
-Точный состав определяется manifest, lock и status. Не читать весь `upstream/` или все темы профиля перед каждой задачей. `PROJECT_STUDY.md` применяется только при явном выборе темы и соответствующей задаче. Общие правила не редактируются внутри проекта; проектная специфика меняется в `.ai-rules/PROJECT_RULES.md`, исключения — в `.ai-rules/RULESET.md`.
+Точный состав определяется manifest, lock и status. Не читать весь `upstream/` или все темы профиля перед каждой задачей. `.ai-rules/upstream/workflows/PROJECT_STUDY.md` применяется только при явном выборе совместимого идентификатора `project-study` и соответствующей задаче. Общие правила не редактируются внутри проекта; проектная специфика меняется в `.ai-rules/PROJECT_RULES.md`, исключения — в `.ai-rules/RULESET.md`.
 
 Если profiles выбраны, корневой `AGENTS.md` должен содержать общий маршрут `.ai-rules/upstream/profiles/` либо явные пути ко всем выбранным profile-файлам. После pinning отсутствие этого маршрута делает подключение inconsistent.
 
@@ -232,3 +232,9 @@ Target вне `.ai-rules/upstream/` или путь через symlink, junction
 Если старые файлы всё же появятся, initializer остановится при обнаружении `.ai-rules-hub.json` или `.ai-rules-hub.lock.json`, а sync потребует `.ai-rules/manifest.json`. Перенос пользовательских `RULESET.md` и `PROJECT_RULES.md` должен выполняться отдельным явным изменением после просмотра их содержимого.
 
 Версия `0.2` не выполняет удалённую загрузку, массовое обновление проектов, автоматическое объединение конфликтов и автоматическое удаление файлов в состоянии `orphan`.
+
+## Перенос `project-study` в workflows
+
+Идентификатор manifest `project-study` сохранён для совместимости версии `0.2`, но его source перемещён из `rules/PROJECT_STUDY.md` в `workflows/PROJECT_STUDY.md`. Для ранее подключённого проекта следующий Plan показывает новый `.ai-rules/upstream/workflows/PROJECT_STUDY.md` как `add`, а старый `.ai-rules/upstream/rules/PROJECT_STUDY.md` как `orphan` или `orphan-modified`.
+
+Apply не удаляет старый файл и не меняет project-owned `AGENTS.md`. Сначала проверь новый workflow, затем явно обнови локальный маршрут на `.ai-rules/upstream/workflows/PROJECT_STUDY.md`. Старый orphan можно удалить вручную только после проверки входящих ссылок и отдельного разрешения владельца. Команды `prompt connect` и `prompt audit` сохраняют прежний CLI-контракт; прямые канонические файлы теперь находятся в каталоге `workflows/` хаба.

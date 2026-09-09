@@ -12,13 +12,13 @@ $hubRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 
 switch ($Name) {
     'audit' {
-        $promptPath = Join-Path $hubRoot 'templates/PROJECT_AUDIT_PROMPT.md'
+        $promptPath = Join-Path $hubRoot 'workflows/PROJECT_AUDIT_PROMPT.md'
     }
     'connect' {
         if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
             throw 'ProjectRoot is required for prompt connect.'
         }
-        $promptPath = Join-Path $hubRoot 'templates/PROJECT_CONNECT_PROMPT.md'
+        $promptPath = Join-Path $hubRoot 'workflows/PROJECT_CONNECT_PROMPT.md'
     }
 }
 

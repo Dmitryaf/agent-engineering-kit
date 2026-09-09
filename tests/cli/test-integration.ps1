@@ -90,7 +90,7 @@ try {
     $coreRule = Get-Content -LiteralPath (Join-Path $hubRoot 'rules/CORE.md') -Raw -Encoding UTF8
     $architectureRule = Get-Content -LiteralPath (Join-Path $hubRoot 'rules/ARCHITECTURE_AND_DATA.md') -Raw -Encoding UTF8
     $productRule = Get-Content -LiteralPath (Join-Path $hubRoot 'rules/PRODUCT.md') -Raw -Encoding UTF8
-    $projectStudyRule = Get-Content -LiteralPath (Join-Path $hubRoot 'rules/PROJECT_STUDY.md') -Raw -Encoding UTF8
+    $projectStudyRule = Get-Content -LiteralPath (Join-Path $hubRoot 'workflows/PROJECT_STUDY.md') -Raw -Encoding UTF8
     $reliabilityRule = Get-Content -LiteralPath (Join-Path $hubRoot 'rules/RELIABILITY_AND_OPERATIONS.md') -Raw -Encoding UTF8
     $rulesReadme = Get-Content -LiteralPath (Join-Path $hubRoot 'rules/README.md') -Raw -Encoding UTF8
     $agentsTemplate = Get-Content -LiteralPath (Join-Path $hubRoot 'templates/AGENTS.md') -Raw -Encoding UTF8
@@ -100,8 +100,8 @@ try {
     $profilesReadme = Get-Content -LiteralPath (Join-Path $hubRoot 'profiles/README.md') -Raw -Encoding UTF8
     $publicRepositoryProfile = Get-Content -LiteralPath (Join-Path $hubRoot 'profiles/public-repository.md') -Raw -Encoding UTF8
     $aiCollaborationRule = Get-Content -LiteralPath (Join-Path $hubRoot 'rules/AI_COLLABORATION.md') -Raw -Encoding UTF8
-    $projectConnectPrompt = Get-Content -LiteralPath (Join-Path $hubRoot 'templates/PROJECT_CONNECT_PROMPT.md') -Raw -Encoding UTF8
-    $projectAuditPrompt = Get-Content -LiteralPath (Join-Path $hubRoot 'templates/PROJECT_AUDIT_PROMPT.md') -Raw -Encoding UTF8
+    $projectConnectPrompt = Get-Content -LiteralPath (Join-Path $hubRoot 'workflows/PROJECT_CONNECT_PROMPT.md') -Raw -Encoding UTF8
+    $projectAuditPrompt = Get-Content -LiteralPath (Join-Path $hubRoot 'workflows/PROJECT_AUDIT_PROMPT.md') -Raw -Encoding UTF8
     $rootReadme = Get-Content -LiteralPath (Join-Path $hubRoot 'README.md') -Raw -Encoding UTF8
     $templatesReadme = Get-Content -LiteralPath (Join-Path $hubRoot 'templates/README.md') -Raw -Encoding UTF8
     $profileFiles = Get-ChildItem -LiteralPath (Join-Path $hubRoot 'profiles') -File -Filter '*.md' | Where-Object { $_.Name -ne 'README.md' }
@@ -118,6 +118,9 @@ try {
     $crlfHubRoot = Join-Path $tempRoot 'crlf hub fixture'
     foreach ($trackedPath in @(& git -C $hubRoot ls-files --cached --others --exclude-standard)) {
         $sourcePath = Join-Path $hubRoot $trackedPath
+        if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
+            continue
+        }
         $targetPath = Join-Path $crlfHubRoot $trackedPath
         $targetDirectory = Split-Path -Parent $targetPath
         if (-not (Test-Path -LiteralPath $targetDirectory)) {
@@ -143,7 +146,7 @@ try {
     $profilesIndex = $agentsTemplate.IndexOf('.ai-rules/upstream/profiles/')
     $topicsIndex = $agentsTemplate.IndexOf('.ai-rules/upstream/rules/')
     Assert-True -Condition ($rulesetIndex -ge 0 -and $rulesetIndex -lt $projectRulesIndex -and $projectRulesIndex -lt $coreIndex -and $coreIndex -lt $profilesIndex -and $profilesIndex -lt $topicsIndex) -Message 'agent template must route RULESET, project rules, core, profiles, then task topics'
-    Assert-True -Condition ($agentsTemplate -match 'не весь `upstream/`' -and $agentsTemplate -match 'PROJECT_STUDY\.md.*явном выборе') -Message 'agent template must forbid whole-upstream reading and route project-study explicitly'
+    Assert-True -Condition ($agentsTemplate -match 'не весь `upstream/`' -and $agentsTemplate -match 'workflows/PROJECT_STUDY\.md.*явном выборе') -Message 'agent template must forbid whole-upstream reading and route project-study explicitly'
     Assert-True -Condition ($agentsTemplate -match 'средняя или большая задача.*AI_COLLABORATION\.md' -and $agentsTemplate -match 'до плана и реализации') -Message 'agent template must load selected collaboration rules before significant task decisions'
     Assert-True -Condition ($agentsTemplate -match 'Подключение хаба разрешает менять только' -and $agentsTemplate -match 'не разрешает менять несвязанные код, документацию, CI, лицензию или настройки' -and $agentsTemplate -match 'зафиксируй в `RULESET\.md`') -Message 'agent template must provide a scope firewall for hub adoption'
     Assert-True -Condition ($agentsTemplate -match 'читателя.*задачу.*хранения в Git.*публикации' -and $agentsTemplate -match 'канонического документа' -and $agentsTemplate -match 'минимальный локальный каталог') -Message 'agent template must route new documents through audience, purpose, storage, publication, and canonical-source decisions'
@@ -177,7 +180,7 @@ try {
     Assert-True -Condition ($deliveryRule -match '(?m)^## Цепочка поставки\s*$' -and $deliveryRule -match 'граф зависимостей' -and $deliveryRule -match 'Публикуемый артефакт' -and $deliveryRule -match 'пропорциональ') -Message 'delivery rule must structurally cover dependencies, published artifacts, and proportional supply-chain safeguards'
     Assert-True -Condition ($validationWorkflow -match '(?m)^permissions:\s*\r?\n\s+contents:\s*read\s*$' -and $validationWorkflow -match 'actions/checkout@[0-9a-f]{40}' -and $validationWorkflow -match 'persist-credentials:\s*false') -Message 'validation workflow must be read-only and use pinned checkout without persisted credentials'
     Assert-True -Condition ((Test-Path -LiteralPath (Join-Path $hubRoot 'CONTRIBUTING.md')) -and (Test-Path -LiteralPath (Join-Path $hubRoot '.github/SECURITY.md'))) -Message 'public repository entry points must exist'
-    Assert-True -Condition ($hubCheck -match 'LICENSE\.md' -and $hubCheck -match 'GitHub-discoverable CONTRIBUTING' -and $hubCheck -match 'templates/PROJECT_CONNECT_PROMPT\.md' -and $hubCheck -match 'templates/PROJECT_AUDIT_PROMPT\.md' -and $hubCheck -match 'full 40-character commit SHA' -and $hubCheck -match 'undesiredEnglishProse') -Message 'hub check must enforce public repository hygiene, onboarding prompts, and one-language prose'
+    Assert-True -Condition ($hubCheck -match 'LICENSE\.md' -and $hubCheck -match 'GitHub-discoverable CONTRIBUTING' -and $hubCheck -match 'workflows/PROJECT_CONNECT_PROMPT\.md' -and $hubCheck -match 'workflows/PROJECT_AUDIT_PROMPT\.md' -and $hubCheck -match 'full 40-character commit SHA' -and $hubCheck -match 'undesiredEnglishProse') -Message 'hub check must enforce public repository hygiene, onboarding workflows, and one-language prose'
     Assert-True -Condition ($hubCheck -match 'hub/BACKLOG\.md' -and $hubCheck -match "'hub/decisions'" -and $hubCheck -match '\.local-docs/') -Message 'hub check must reject owner-only public documents and require an ignored local location'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $hubRoot 'hub/BACKLOG.md')) -and -not (Test-Path -LiteralPath (Join-Path $hubRoot 'hub/decisions'))) -Message 'owner backlog and decision history must not remain public'
     foreach ($topicProperty in $catalog.topics.PSObject.Properties) {
@@ -185,7 +188,7 @@ try {
     }
     Assert-True -Condition ($catalog.schemaVersion -eq '0.1' -and $catalog.topics.'reliability-and-operations'.file -eq 'rules/RELIABILITY_AND_OPERATIONS.md' -and -not [string]::IsNullOrWhiteSpace([string]$catalog.topics.'reliability-and-operations'.description)) -Message 'catalog schema must stay 0.1 and include the stable reliability topic with a description'
     Assert-True -Condition ($null -eq $catalog.topics.PSObject.Properties['language'] -and $null -eq $catalog.topics.PSObject.Properties['plain-language']) -Message 'plain language must not require a separate catalog topic'
-    Assert-True -Condition ($rulesReadme -match 'CORE\.md.*обязателен для каждого подключённого проекта' -and $rulesReadme -match 'RELIABILITY_AND_OPERATIONS\.md' -and $rulesReadme -match 'инструкцию.*задачи') -Message 'rules index must keep CORE mandatory and explain the project-study instruction'
+    Assert-True -Condition ($rulesReadme -match 'CORE\.md.*обязателен для каждого подключённого проекта' -and $rulesReadme -match 'RELIABILITY_AND_OPERATIONS\.md' -and $rulesReadme -match 'Рабочие процессы конкретных задач') -Message 'rules index must keep CORE mandatory and route task workflows separately'
     foreach ($profileProperty in $catalog.profiles.PSObject.Properties) {
         Assert-True -Condition (-not [string]::IsNullOrWhiteSpace([string]$profileProperty.Value.description) -and -not [string]::IsNullOrWhiteSpace([string]$profileProperty.Value.file) -and @($profileProperty.Value.topics).Count -gt 0) -Message "catalog profile '$($profileProperty.Name)' must define description, source file, and topic composition"
         $profileContent = Get-Content -LiteralPath (Join-Path $hubRoot ([string]$profileProperty.Value.file)) -Raw -Encoding UTF8
@@ -208,7 +211,7 @@ try {
     Assert-True -Condition ($projectConnectPrompt -match 'минимальный подходящий набор profiles и topics' -and $projectConnectPrompt -match 'Остановись перед `-Apply`' -and $projectConnectPrompt -match 'не выполняй commit, push' -and $projectConnectPrompt -match '\{\{PROJECT_ROOT\}\}' -and $projectConnectPrompt -match '\{\{HUB_CLI_PATH\}\}') -Message 'project connect prompt must guide minimal selection, Plan approval, and external-action boundaries'
     Assert-True -Condition ($projectAuditPrompt -match 'Фаза 1 — подключение' -and $projectAuditPrompt -match 'явно сообщи о завершении фазы подключения' -and $projectAuditPrompt -match 'Фаза 2 — аудит только для чтения' -and $projectAuditPrompt -match 'После этого не меняй ни один файл проекта' -and $projectAuditPrompt -match 'satisfied, gap, not applicable или unknown' -and $projectAuditPrompt -match 'предлагаемые отдельные задачи.*без их выполнения') -Message 'project audit prompt must separate adoption changes from the read-only project review'
     Assert-True -Condition ($projectAuditPrompt -match 'парные или похожие сценарии' -and $projectAuditPrompt -match 'один вариант без другого' -and $projectAuditPrompt -match 'путь нового разработчика' -and $projectAuditPrompt -match 'Размер файла считай сигналом' -and $projectAuditPrompt -match 'сгруппированные по классу') -Message 'project audit prompt must compare analogous scenarios, assess human onboarding, and group repeated gaps by system layer'
-    Assert-True -Condition ($rootReadme -match 'prompt connect' -and $rootReadme -match 'templates/PROJECT_AUDIT_PROMPT\.md' -and $rootReadme -match 'Shared rules do not need to be copied manually' -and $templatesReadme -match 'PROJECT_CONNECT_PROMPT\.md.*в проект не копируется' -and $templatesReadme -match 'PROJECT_AUDIT_PROMPT\.md.*в проект не копируется') -Message 'onboarding docs must lead with agent-assisted connection and keep the deeper audit prompt'
+    Assert-True -Condition ($rootReadme -match 'prompt connect' -and $rootReadme -match 'workflows/PROJECT_AUDIT_PROMPT\.md' -and $rootReadme -match 'Shared rules do not need to be copied manually' -and $templatesReadme -match 'workflows/PROJECT_CONNECT_PROMPT\.md' -and $templatesReadme -match 'workflows/PROJECT_AUDIT_PROMPT\.md') -Message 'onboarding docs must lead with agent-assisted connection and keep workflows separate from templates'
     $topicLengths = @($catalog.topics.PSObject.Properties | ForEach-Object { (Get-Content -LiteralPath (Join-Path $hubRoot ([string]$_.Value.file)) -Raw -Encoding UTF8).Length })
     Assert-True -Condition ($coreRule.Length -lt (($topicLengths | Measure-Object -Maximum).Maximum) -and $coreRule.Length -lt (($topicLengths | Measure-Object -Sum).Sum / 3)) -Message 'core must remain compact relative to thematic rules'
     Assert-True -Condition ($projectStudyRule -match 'учебных документов' -and $projectStudyRule -match 'Исходный код.*конфигурация.*история Git.*только для чтения' -and $projectStudyRule -match 'факт.*вероятный вывод.*неизвестное.*оценка' -and $projectStudyRule -match 'язык следует локальным правилам или запросу') -Message 'project-study must limit writes to study documents and distinguish confirmation statuses without a universal language'
@@ -285,7 +288,7 @@ try {
 
     $applyHubRoot = Join-Path $tempRoot 'clean apply hub fixture'
     New-Item -ItemType Directory -Path $applyHubRoot | Out-Null
-    foreach ($fixtureDirectory in @('profiles', 'rules', 'scripts', 'src', 'sync', 'templates')) {
+    foreach ($fixtureDirectory in @('profiles', 'rules', 'scripts', 'src', 'sync', 'templates', 'workflows')) {
         Copy-Item -LiteralPath (Join-Path $hubRoot $fixtureDirectory) -Destination $applyHubRoot -Recurse
     }
     Copy-Item -LiteralPath $cliPath -Destination (Join-Path $applyHubRoot 'ai-rules.ps1')
@@ -368,7 +371,7 @@ try {
     $cliInitialUpdate = Invoke-HubScript -ScriptPath $applyCliPath -Arguments @('update', '-ProjectRoot', $cliProjectRoot, '-Apply')
     Assert-True -Condition ($cliInitialUpdate.ExitCode -eq 0) -Message "update -Apply must replace the removed unpinned recovery path: $($cliInitialUpdate.Output)"
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $cliProjectRoot '.ai-rules/upstream/rules/RELIABILITY_AND_OPERATIONS.md'))) -Message 'standard-product must not pull reliability without an explicit topic'
-    Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $cliProjectRoot '.ai-rules/upstream/rules/PROJECT_STUDY.md'))) -Message 'standard-product must not pull project-study without an explicit topic'
+    Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $cliProjectRoot '.ai-rules/upstream/workflows/PROJECT_STUDY.md'))) -Message 'standard-product must not pull project-study without an explicit topic'
     $cliManifestPath = Join-Path $cliProjectRoot '.ai-rules/manifest.json'
     $cliManifest = Get-Content -LiteralPath $cliManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $currentHubRevision = $applyHubRevision
@@ -482,7 +485,7 @@ try {
     Assert-True -Condition (Test-Path -LiteralPath $managedProfilePath) -Message 'sync must copy selected profile'
     Assert-True -Condition (Test-Path -LiteralPath (Join-Path $upstreamRoot 'rules/PRODUCT.md')) -Message 'profile must pull topic dependencies'
     Assert-True -Condition (Test-Path -LiteralPath (Join-Path $upstreamRoot 'rules/DOCUMENTATION.md')) -Message 'standard-product must pull documentation architecture rule'
-    Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $upstreamRoot 'rules/PROJECT_STUDY.md'))) -Message 'sync must not copy project-study without an explicit selection'
+    Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $upstreamRoot 'workflows/PROJECT_STUDY.md'))) -Message 'sync must not copy project-study without an explicit selection'
     Assert-True -Condition (Test-Path -LiteralPath (Join-Path $upstreamRoot 'rules/RELIABILITY_AND_OPERATIONS.md')) -Message 'sync must copy explicitly selected reliability topic'
     Assert-True -Condition (Test-Path -LiteralPath $lockPath) -Message 'apply must create lock'
     Assert-True -Condition ((Get-Content -LiteralPath (Join-Path $projectRoot 'AGENTS.md') -Raw -Encoding UTF8).Trim() -eq '# Local agent rules') -Message 'apply must not overwrite local AGENTS.md'
@@ -594,7 +597,7 @@ try {
 
     $cleanHubRoot = Join-Path $tempRoot 'clean hub fixture'
     New-Item -ItemType Directory -Path $cleanHubRoot | Out-Null
-    foreach ($fixtureDirectory in @('profiles', 'rules', 'scripts', 'src', 'sync', 'templates')) {
+    foreach ($fixtureDirectory in @('profiles', 'rules', 'scripts', 'src', 'sync', 'templates', 'workflows')) {
         Copy-Item -LiteralPath (Join-Path $hubRoot $fixtureDirectory) -Destination $cleanHubRoot -Recurse
     }
     Copy-Item -LiteralPath $cliPath -Destination (Join-Path $cleanHubRoot 'ai-rules.ps1')
@@ -692,7 +695,7 @@ try {
     Assert-True -Condition ($cleanInit.ExitCode -eq 0) -Message "clean CLI init must pass: $($cleanInit.Output)"
     $cleanInitialApply = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('update', '-ProjectRoot', $updateProjectRoot, '-Apply')
     Assert-True -Condition ($cleanInitialApply.ExitCode -eq 0) -Message "first update -Apply must pin and synchronize the project: $($cleanInitialApply.Output)"
-    Assert-True -Condition (Test-Path -LiteralPath (Join-Path $updateProjectRoot '.ai-rules/upstream/rules/PROJECT_STUDY.md')) -Message 'sync must copy explicitly selected project-study topic'
+    Assert-True -Condition (Test-Path -LiteralPath (Join-Path $updateProjectRoot '.ai-rules/upstream/workflows/PROJECT_STUDY.md')) -Message 'sync must copy explicitly selected project-study workflow'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $updateProjectRoot '.ai-rules/upstream/rules/RELIABILITY_AND_OPERATIONS.md'))) -Message 'project-study selection must not pull reliability implicitly'
 
     $updateManifestPath = Join-Path $updateProjectRoot '.ai-rules/manifest.json'

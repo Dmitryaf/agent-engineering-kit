@@ -28,8 +28,9 @@ $requiredPaths = @(
     'hub/COMMIT_RULES.md',
     'profiles/README.md',
     'templates/README.md',
-    'templates/PROJECT_CONNECT_PROMPT.md',
-    'templates/PROJECT_AUDIT_PROMPT.md',
+    'workflows/PROJECT_CONNECT_PROMPT.md',
+    'workflows/PROJECT_AUDIT_PROMPT.md',
+    'workflows/PROJECT_STUDY.md',
     'templates/PROJECT_RULES.full.md',
     'sync/README.md',
     'sync/catalog.json',
@@ -54,7 +55,8 @@ $requiredPaths = @(
     'tests/sync/test-sync-plan.ps1',
     'tests/cli/test-integration.ps1',
     'tests/diagnostics/test-project-state.ps1',
-    'tests/policy-structure/test-module-boundaries.ps1'
+    'tests/policy-structure/test-module-boundaries.ps1',
+    'tests/policy-structure/test-portable-boundaries.ps1'
 )
 
 foreach ($requiredPath in $requiredPaths) {
