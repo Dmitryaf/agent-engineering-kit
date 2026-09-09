@@ -56,6 +56,7 @@ The synchronization layer owns only `.ai-rules/upstream/` and `.ai-rules/lock.js
 - [`profiles/`](profiles/) contains reusable compositions for stable project properties.
 - [`workflows/`](workflows/) contains explicit task processes such as connection, audit, and project study.
 - [`templates/`](templates/) contains project-owned starter documents.
+- [`evals/`](evals/) contains human-reviewed behavioral cases for checking whether key rules change agent behavior.
 
 Profiles and topics are selected in `.ai-rules/manifest.json`; `.ai-rules/lock.json` records the exact installed revision and normalized SHA-256 values. The compatible `project-study` topic identifier currently materializes a workflow and is not selected by any profile.
 
