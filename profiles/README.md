@@ -11,10 +11,10 @@
 | [`standard-product.md`](standard-product.md) | пользовательское приложение или сервис |
 | [`data-sensitive.md`](data-sensitive.md) | данные с высокой ценой раскрытия или потери |
 | [`research-driven.md`](research-driven.md) | решения зависят от исследования или данных о выполнении |
-| [`learning-project.md`](learning-project.md) | доставка одновременно является обучением владельца |
+| [`learning-project.md`](learning-project.md) | развитие самостоятельности является устойчивой частью доставки |
 | [`public-repository.md`](public-repository.md) | репозиторий публичен или готовится к публикации |
 
-Профили можно сочетать. `standard-product` обычно является основой пользовательского приложения; `learning-project`, `public-repository` и `data-sensitive` часто выступают дополнительными профилями. `research-driven` может использоваться самостоятельно для исследовательского прототипа или вместе со `standard-product`.
+Профили можно сочетать. `standard-product` обычно является основой пользовательского приложения; `learning-project`, `public-repository` и `data-sensitive` могут выступать дополнительными профилями. Не выбирай `learning-project` для разовой учебной задачи: она относится к рабочему процессу `project-study` или локальной политике проекта. `research-driven` может использоваться самостоятельно для исследовательского прототипа или вместе со `standard-product`.
 
 | Сценарий | Profiles |
 | --- | --- |
