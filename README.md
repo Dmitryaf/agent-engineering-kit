@@ -58,7 +58,7 @@ The synchronization layer owns only `.ai-rules/upstream/` and `.ai-rules/lock.js
 - [`templates/`](templates/) contains project-owned starter documents.
 - [`evals/`](evals/) contains human-reviewed behavioral cases for checking whether key rules change agent behavior.
 
-Profiles and topics are selected in `.ai-rules/manifest.json`; `.ai-rules/lock.json` records the exact installed revision and normalized SHA-256 values. The compatible `project-study` topic identifier currently materializes a workflow and is not selected by any profile.
+Profiles and topics are selected in `.ai-rules/manifest.json`; the generated `.ai-rules/upstream/INDEX.md` maps that effective set to task-specific reading conditions, and `.ai-rules/lock.json` records the exact installed revision and normalized SHA-256 values. The compatible `project-study` topic identifier currently materializes a workflow and is not selected by any profile.
 
 ## Inspect and update
 
