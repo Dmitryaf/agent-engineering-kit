@@ -16,6 +16,7 @@ function Get-RepoRelativePath {
 $requiredPaths = @(
     '.gitignore',
     'AGENTS.md',
+    'CLAUDE.md',
     'README.md',
     'ai-rules.ps1',
     'CONTRIBUTING.md',
@@ -48,6 +49,7 @@ $requiredPaths = @(
     'src/Contracts.psm1',
     'src/PathsAndHashing.psm1',
     'src/GitState.psm1',
+    'src/EffectiveIndex.psm1',
     'src/SyncPlan.psm1',
     'src/ProjectState.psm1',
     'src/Diagnostics.psm1',
@@ -68,6 +70,14 @@ foreach ($requiredPath in $requiredPaths) {
     $absolutePath = Join-Path $repoRoot $requiredPath
     if (-not (Test-Path -LiteralPath $absolutePath)) {
         $errors.Add("Missing required path: $requiredPath")
+    }
+}
+
+$claudeAdapterPath = Join-Path $repoRoot 'CLAUDE.md'
+if (Test-Path -LiteralPath $claudeAdapterPath -PathType Leaf) {
+    $claudeAdapter = Get-Content -LiteralPath $claudeAdapterPath -Raw -Encoding UTF8
+    if ($claudeAdapter.Trim() -ne '@AGENTS.md') {
+        $errors.Add('CLAUDE.md must only import the canonical root AGENTS.md.')
     }
 }
 
@@ -230,6 +240,17 @@ if (Test-Path -LiteralPath $catalogPath -PathType Leaf) {
         $catalogSources = [System.Collections.Generic.List[string]]::new()
         foreach ($coreFile in @($catalog.core)) {
             $catalogSources.Add([string]$coreFile)
+            $coreMetadata = $catalog.coreMetadata.PSObject.Properties[[string]$coreFile]
+            if ($null -eq $coreMetadata) {
+                $errors.Add("Core '$coreFile' has no routing metadata.")
+            }
+            elseif (
+                [string]$coreMetadata.Value.kind -ne 'core' -or
+                [string]::IsNullOrWhiteSpace([string]$coreMetadata.Value.description) -or
+                [string]::IsNullOrWhiteSpace([string]$coreMetadata.Value.readWhen)
+            ) {
+                $errors.Add("Core '$coreFile' has invalid routing metadata.")
+            }
         }
         $topicFileOwners = @{}
         foreach ($topicProperty in $catalog.topics.PSObject.Properties) {
@@ -238,6 +259,9 @@ if (Test-Path -LiteralPath $catalogPath -PathType Leaf) {
             }
             if ([string]::IsNullOrWhiteSpace([string]$topicProperty.Value.description)) {
                 $errors.Add("Topic '$($topicProperty.Name)' has no description.")
+            }
+            if ([string]$topicProperty.Value.kind -notin @('rule', 'workflow') -or [string]::IsNullOrWhiteSpace([string]$topicProperty.Value.readWhen)) {
+                $errors.Add("Topic '$($topicProperty.Name)' has invalid routing metadata.")
             }
             $topicFile = ([string]$topicProperty.Value.file).Replace('\', '/')
             $catalogSources.Add($topicFile)
@@ -260,6 +284,9 @@ if (Test-Path -LiteralPath $catalogPath -PathType Leaf) {
             }
             if ([string]::IsNullOrWhiteSpace([string]$profileProperty.Value.file)) {
                 $errors.Add("Profile '$($profileProperty.Name)' has no file.")
+            }
+            if ([string]$profileProperty.Value.kind -ne 'profile' -or [string]::IsNullOrWhiteSpace([string]$profileProperty.Value.readWhen)) {
+                $errors.Add("Profile '$($profileProperty.Name)' has invalid routing metadata.")
             }
             if (@($profileProperty.Value.topics).Count -eq 0) {
                 $errors.Add("Profile '$($profileProperty.Name)' has no topic composition.")
