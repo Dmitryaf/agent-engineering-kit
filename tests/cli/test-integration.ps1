@@ -355,7 +355,7 @@ try {
     $cliProjectBeforeStatus = Get-TreeSnapshot -Root $cliProjectRoot
     $unpinnedStatus = Invoke-HubScript -ScriptPath $cliPath -Arguments @('status', '-ProjectRoot', $cliProjectRoot)
     Assert-True -Condition ($unpinnedStatus.ExitCode -eq 0 -and $unpinnedStatus.Output -match 'State: unpinned') -Message 'status must identify an unpinned manifest'
-    Assert-True -Condition ($unpinnedStatus.Output -match 'Direct topics' -and $unpinnedStatus.Output -match 'Effective topics' -and $unpinnedStatus.Output -match 'architecture-and-data' -and $unpinnedStatus.Output -match 'Next:') -Message 'status must show direct, effective, profile-derived topics, and a next action'
+    Assert-True -Condition ($unpinnedStatus.Output -match 'Состояние: проект подготовлен' -and $unpinnedStatus.Output -match 'Следующий шаг:' -and $unpinnedStatus.Output -notmatch 'Direct topics|Effective topics|Revision|Managed-каталог') -Message 'status must show a concise state and next action without diagnostic internals'
     Assert-True -Condition ((Get-TreeSnapshot -Root $cliProjectRoot) -eq $cliProjectBeforeStatus) -Message 'status must not change project files'
 
     $unpinnedPlan = Invoke-HubScript -ScriptPath $cliPath -Arguments @('plan', '-ProjectRoot', $cliProjectRoot)
@@ -368,8 +368,8 @@ try {
 
     $cliDoctorBefore = Get-TreeSnapshot -Root $cliProjectRoot
     $cliDoctor = Invoke-HubScript -ScriptPath $cliPath -Arguments @('doctor', '-ProjectRoot', $cliProjectRoot)
-    Assert-True -Condition ($cliDoctor.ExitCode -eq 0 -and $cliDoctor.Output -match '\[WARN\]' -and $cliDoctor.Output -match 'placeholder') -Message "project doctor warnings must keep a zero exit code: $($cliDoctor.Output)"
-    Assert-True -Condition ($cliDoctor.Output -match 'целостность подключения AI Rules Hub' -and $cliDoctor.Output -match 'не означает соответствие всего проекта') -Message 'project doctor must distinguish integration integrity from project compliance'
+    Assert-True -Condition ($cliDoctor.ExitCode -eq 0 -and $cliDoctor.Output -match '\[WARN\]' -and $cliDoctor.Output -match 'незаполненные места') -Message "project doctor warnings must keep a zero exit code: $($cliDoctor.Output)"
+    Assert-True -Condition ($cliDoctor.Output -match 'doctor проверяет только подключение правил' -and $cliDoctor.Output -match 'не означает соответствие всего проекта') -Message 'project doctor must distinguish integration integrity from project compliance'
     Assert-True -Condition ((Get-TreeSnapshot -Root $cliProjectRoot) -eq $cliDoctorBefore) -Message 'project doctor must be read-only'
 
     $syncPath = $applySyncPath
@@ -678,14 +678,14 @@ try {
     $connectProjectRoot = Join-Path $tempRoot 'connect project'
     New-Item -ItemType Directory -Path $connectProjectRoot | Out-Null
     $prematureConnectApply = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('connect', '-ProjectRoot', $connectProjectRoot, '-Profiles', 'standard-product', '-Apply')
-    Assert-True -Condition ($prematureConnectApply.ExitCode -ne 0 -and $prematureConnectApply.Output -match 'Первый Plan ещё не показан' -and -not (Test-Path -LiteralPath (Join-Path $connectProjectRoot '.ai-rules/manifest.json'))) -Message 'connect must not let first-time Apply bypass preview'
+    Assert-True -Condition ($prematureConnectApply.ExitCode -ne 0 -and $prematureConnectApply.Output -match 'Изменения ещё не показаны' -and -not (Test-Path -LiteralPath (Join-Path $connectProjectRoot '.ai-rules/manifest.json'))) -Message 'connect must not let first-time Apply bypass preview'
     $connectPreview = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('connect', '-ProjectRoot', $connectProjectRoot, '-Profiles', 'standard-product')
-    Assert-True -Condition ($connectPreview.ExitCode -eq 0 -and $connectPreview.Output -match 'Локальный слой подготовлен' -and $connectPreview.Output -match 'Предварительный Plan' -and $connectPreview.Output -match 'Файлы проекта не изменены') -Message "connect must initialize project-owned files and show the first managed Plan: $($connectPreview.Output)"
+    Assert-True -Condition ($connectPreview.ExitCode -eq 0 -and $connectPreview.Output -match 'Локальные файлы подготовлены' -and $connectPreview.Output -match 'Предлагаемые изменения' -and $connectPreview.Output -match 'Файлы проекта не изменены') -Message "connect must initialize local files and show the first proposed change set: $($connectPreview.Output)"
     Assert-True -Condition ((Test-Path -LiteralPath (Join-Path $connectProjectRoot '.ai-rules/manifest.json')) -and -not (Test-Path -LiteralPath (Join-Path $connectProjectRoot '.ai-rules/lock.json'))) -Message 'connect preview must leave managed rules unapplied'
     $connectApply = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('connect', '-ProjectRoot', $connectProjectRoot, '-Profiles', 'standard-product', '-Apply')
     Assert-True -Condition ($connectApply.ExitCode -eq 0 -and $connectApply.Output -match 'Проверка подключения' -and $connectApply.Output -match 'Итоговое состояние' -and $connectApply.Output -match 'State: synchronized') -Message "connect -Apply must verify and report the synchronized result: $($connectApply.Output)"
     $connectSelectionMismatch = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('connect', '-ProjectRoot', $connectProjectRoot, '-Profiles', 'learning-project')
-    Assert-True -Condition ($connectSelectionMismatch.ExitCode -ne 0 -and $connectSelectionMismatch.Output -match 'отличается от manifest') -Message 'repeat connect must reject a selection that differs from the project manifest'
+    Assert-True -Condition ($connectSelectionMismatch.ExitCode -ne 0 -and $connectSelectionMismatch.Output -match 'отличается от \.ai-rules/manifest\.json') -Message 'repeat connect must reject a selection that differs from the project manifest'
 
     $noProfileProjectRoot = Join-Path $tempRoot 'no profile project'
     New-Item -ItemType Directory -Path $noProfileProjectRoot | Out-Null
@@ -736,13 +736,13 @@ try {
     $connectedDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
     Assert-True -Condition ($connectedDoctor.ExitCode -eq 0 -and $connectedDoctor.Output -notmatch '\[ERROR\]') -Message "doctor must accept a correctly connected pinned project: $($connectedDoctor.Output)"
     Assert-True -Condition ($connectedDoctor.Output -match 'AGENTS\.md содержит стандартные маршруты') -Message 'pinned project must accept the effective index route'
-    Assert-True -Condition ($connectedDoctor.Output -match 'Manifest и RULESET\.md согласованы' -and $connectedDoctor.Output -notmatch 'architecture-and-data.*не объяснена') -Message 'doctor must require direct selections but not profile-derived effective topics in RULESET'
+    Assert-True -Condition ($connectedDoctor.Output -match 'manifest\.json и RULESET\.md согласованы' -and $connectedDoctor.Output -notmatch 'architecture-and-data.*не объяснена') -Message 'doctor must require direct selections but not profile-derived effective topics in RULESET'
     Assert-True -Condition ($connectedDoctor.Output -match '(?m)^\[WARN\] В RULESET\.md.*<почему выбран>.*<почему подключена отдельно>' -and $connectedDoctor.Output -notmatch '(?m)^\[WARN\] В RULESET\.md.*(?:<название>|release gate)') -Message 'doctor must warn only about required RULESET decisions'
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $connectedDoctorSnapshot) -Message 'doctor must keep a connected project unchanged'
 
     $cleanPreviewSnapshot = Get-TreeSnapshot -Root $updateProjectRoot
     $cleanUpdatePreview = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('update', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($cleanUpdatePreview.ExitCode -eq 0 -and $cleanUpdatePreview.Output -match 'Целевая revision хаба' -and $cleanUpdatePreview.Output -match 'После проверки выполните ту же команду с -Apply' -and $cleanUpdatePreview.Output -notmatch 'ВНИМАНИЕ') -Message 'clean update preview must retain the normal apply hint'
+    Assert-True -Condition ($cleanUpdatePreview.ExitCode -eq 0 -and $cleanUpdatePreview.Output -match 'Версия после обновления' -and $cleanUpdatePreview.Output -match 'После проверки выполните ту же команду с -Apply' -and $cleanUpdatePreview.Output -notmatch 'ВНИМАНИЕ') -Message 'clean update preview must retain the normal apply hint'
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $cleanPreviewSnapshot) -Message 'clean update preview must remain read-only'
 
     $dirtyHubFilePath = Join-Path $cleanHubRoot 'rules/CORE.md'
@@ -752,7 +752,7 @@ try {
     $dirtyManifestBytes = [System.IO.File]::ReadAllBytes($updateManifestPath)
     $dirtyLockBytes = [System.IO.File]::ReadAllBytes($updateLockPath)
     $dirtyUpdatePreview = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('update', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($dirtyUpdatePreview.ExitCode -eq 0 -and $dirtyUpdatePreview.Output -match 'ВНИМАНИЕ: рабочее дерево хаба содержит незакоммиченные изменения' -and $dirtyUpdatePreview.Output -match 'Preview построен по текущим файлам checkout' -and $dirtyUpdatePreview.Output -match 'может не соответствовать' -and $dirtyUpdatePreview.Output -match 'только указанному commit SHA' -and $dirtyUpdatePreview.Output -match 'Базовая revision checkout' -and $dirtyUpdatePreview.Output -match 'Рабочее дерево хаба изменено: true') -Message 'dirty update preview must explain its working-tree provenance'
+    Assert-True -Condition ($dirtyUpdatePreview.ExitCode -eq 0 -and $dirtyUpdatePreview.Output -match 'ВНИМАНИЕ: рабочее дерево хаба содержит незакоммиченные изменения' -and $dirtyUpdatePreview.Output -match 'Просмотр построен по текущим файлам хаба' -and $dirtyUpdatePreview.Output -match 'может включать' -and $dirtyUpdatePreview.Output -match 'изменения, которых ещё нет в указанном коммите' -and $dirtyUpdatePreview.Output -match 'Версия локального хаба' -and $dirtyUpdatePreview.Output -match 'Рабочее дерево хаба изменено: true') -Message 'dirty update preview must explain its working-tree provenance'
     Assert-True -Condition ($dirtyUpdatePreview.Output -notmatch 'После проверки выполните ту же команду с -Apply' -and $dirtyUpdatePreview.Output -match 'сначала сохраните или отмените изменения хаба') -Message 'dirty preview must not offer immediate Apply'
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $dirtyPreviewSnapshot -and ([Convert]::ToBase64String([System.IO.File]::ReadAllBytes($updateManifestPath))) -eq ([Convert]::ToBase64String($dirtyManifestBytes)) -and ([Convert]::ToBase64String([System.IO.File]::ReadAllBytes($updateLockPath))) -eq ([Convert]::ToBase64String($dirtyLockBytes))) -Message 'dirty preview must not change project files, manifest, or lock'
     $dirtyLowLevelApply = Invoke-HubScript -ScriptPath (Join-Path $cleanHubRoot 'scripts/sync-rules.ps1') -Arguments @('-ProjectRoot', $updateProjectRoot, '-Mode', 'Apply')
@@ -791,8 +791,8 @@ try {
         [pscustomobject]@{ Name = 'missing direct topic'; Content = $initialRuleset.Replace('`project-study`', '`topic-not-explained`'); Pattern = 'Тема project-study' },
         [pscustomobject]@{ Name = 'known unselected profile in profile section'; Content = $initialRuleset.Replace('## Дополнительные темы', "- public-repository — not selected`n`n## Дополнительные темы"); Pattern = 'Выбранные профили.*public-repository.*не выбран' },
         [pscustomobject]@{ Name = 'known unselected topic in topic section'; Content = $initialRuleset.Replace('## Локальные исключения', "- reliability-and-operations — not selected`n`n## Локальные исключения"); Pattern = 'Дополнительные темы.*reliability-and-operations.*не выбрана' },
-        [pscustomobject]@{ Name = 'missing profile section'; Content = [regex]::Replace($initialRuleset, '(?ms)^## Выбранные профили\s*.*?(?=^## )', ''); Pattern = 'не содержит секцию «Выбранные профили»' },
-        [pscustomobject]@{ Name = 'missing topic section'; Content = [regex]::Replace($initialRuleset, '(?ms)^## Дополнительные темы\s*.*?(?=^## )', ''); Pattern = 'не содержит секцию «Дополнительные темы»' }
+        [pscustomobject]@{ Name = 'missing profile section'; Content = [regex]::Replace($initialRuleset, '(?ms)^## Выбранные профили\s*.*?(?=^## )', ''); Pattern = 'нет раздела «Выбранные профили»' },
+        [pscustomobject]@{ Name = 'missing topic section'; Content = [regex]::Replace($initialRuleset, '(?ms)^## Дополнительные темы\s*.*?(?=^## )', ''); Pattern = 'нет раздела «Дополнительные темы»' }
     )
     foreach ($rulesetCase in $rulesetCases) {
         [System.IO.File]::WriteAllText($updateRulesetPath, $rulesetCase.Content, (New-Object System.Text.UTF8Encoding($false)))
@@ -824,12 +824,12 @@ try {
     $managedCoreText = [System.IO.File]::ReadAllText($updateManagedCorePath).Replace("`r`n", "`n").Replace("`r", "`n")
     [System.IO.File]::WriteAllText($updateManagedCorePath, $managedCoreText.Replace("`n", "`r`n"), (New-Object System.Text.UTF8Encoding($false)))
     $normalizedHashDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($normalizedHashDoctor.ExitCode -eq 0 -and $normalizedHashDoctor.Output -notmatch 'Managed-файл изменён') -Message 'doctor and sync must share normalized text hashing'
+    Assert-True -Condition ($normalizedHashDoctor.ExitCode -eq 0 -and $normalizedHashDoctor.Output -notmatch 'Управляемый файл изменён') -Message 'doctor and sync must share normalized text hashing'
     [System.IO.File]::WriteAllBytes($updateManagedCorePath, $originalManagedCoreBytes)
     Remove-Item -LiteralPath $updateManagedCorePath -Force
     $missingManagedSnapshot = Get-TreeSnapshot -Root $updateProjectRoot
     $missingManagedDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($missingManagedDoctor.ExitCode -ne 0 -and $missingManagedDoctor.Output -match 'Managed-файл отсутствует') -Message 'doctor must fail when a managed file is missing'
+    Assert-True -Condition ($missingManagedDoctor.ExitCode -ne 0 -and $missingManagedDoctor.Output -match 'Управляемый файл отсутствует') -Message 'doctor must fail when a managed file is missing'
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $missingManagedSnapshot) -Message 'doctor must not restore a missing managed file'
     $missingManagedStatus = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('status', '-ProjectRoot', $updateProjectRoot)
     Assert-True -Condition ($missingManagedStatus.Output -match 'State: inconsistent' -and (Get-TreeSnapshot -Root $updateProjectRoot) -eq $missingManagedSnapshot) -Message 'status must report a missing managed file without modifying it'
@@ -850,7 +850,7 @@ try {
     $unknownStateLock | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $updateLockPath -Encoding UTF8
     $unknownStateSnapshot = Get-TreeSnapshot -Root $updateProjectRoot
     $unknownStateDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($unknownStateDoctor.ExitCode -ne 0 -and $unknownStateDoctor.Output -match 'Неизвестное состояние lock') -Message 'doctor must reject unknown lock states'
+    Assert-True -Condition ($unknownStateDoctor.ExitCode -ne 0 -and $unknownStateDoctor.Output -match 'Неизвестное состояние.*lock\.json') -Message 'doctor must reject unknown lock states'
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $unknownStateSnapshot) -Message 'doctor must not rewrite an unknown lock state'
     [System.IO.File]::WriteAllBytes($updateLockPath, $originalUpdateLockBytes)
 
@@ -861,7 +861,7 @@ try {
     $orphanLock | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $updateLockPath -Encoding UTF8
     $orphanSnapshot = Get-TreeSnapshot -Root $updateProjectRoot
     $orphanDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($orphanDoctor.ExitCode -eq 0 -and $orphanDoctor.Output -match 'Orphan-файл сохранён') -Message 'doctor must report a correct orphan as warning'
+    Assert-True -Condition ($orphanDoctor.ExitCode -eq 0 -and $orphanDoctor.Output -match 'Исключённый файл сохранён') -Message 'doctor must report a correct orphan as warning'
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $orphanSnapshot) -Message 'doctor must preserve a correct orphan and lock'
     Add-Content -LiteralPath $orphanPath -Value 'local orphan change' -Encoding UTF8
     $modifiedOrphanSnapshot = Get-TreeSnapshot -Root $updateProjectRoot
@@ -870,7 +870,7 @@ try {
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $modifiedOrphanSnapshot) -Message 'doctor must preserve a modified orphan and lock'
     Remove-Item -LiteralPath $orphanPath -Force
     $missingOrphanDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($missingOrphanDoctor.ExitCode -eq 0 -and $missingOrphanDoctor.Output -match 'Orphan-файл отсутствует') -Message 'doctor must warn without failing for a missing orphan'
+    Assert-True -Condition ($missingOrphanDoctor.ExitCode -eq 0 -and $missingOrphanDoctor.Output -match 'Исключённый файл уже отсутствует') -Message 'doctor must warn without failing for a missing orphan'
     [System.IO.File]::WriteAllBytes($updateLockPath, $originalUpdateLockBytes)
 
     Set-Content -LiteralPath (Join-Path $cleanHubRoot 'fixture-revision.txt') -Value 'second clean revision' -Encoding UTF8
@@ -883,7 +883,7 @@ try {
     Assert-True -Condition ($updateAvailableStatus.ExitCode -eq 0 -and $updateAvailableStatus.Output -match 'State: update-available') -Message "status must identify a newer hub checkout: $($updateAvailableStatus.Output)"
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $updateAvailableSnapshot) -Message 'update-available status must remain read-only'
     $updateAvailableDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($updateAvailableDoctor.ExitCode -eq 0 -and $updateAvailableDoctor.Output -match '\[WARN\].*более новую revision' -and $updateAvailableDoctor.Output -notmatch '\[ERROR\]') -Message 'doctor must warn, not fail, when the hub is newer'
+    Assert-True -Condition ($updateAvailableDoctor.ExitCode -eq 0 -and $updateAvailableDoctor.Output -match '\[WARN\].*более новая версия' -and $updateAvailableDoctor.Output -notmatch '\[ERROR\]') -Message 'doctor must warn, not fail, when the hub is newer'
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $updateAvailableSnapshot) -Message 'update-available doctor must remain read-only'
 
     $updateApply = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('update', '-ProjectRoot', $updateProjectRoot, '-Apply')
@@ -899,9 +899,9 @@ try {
     Assert-True -Condition ($LASTEXITCODE -eq 0) -Message 'relation fixture must checkout the older hub revision'
     $checkoutOlderSnapshot = Get-TreeSnapshot -Root $updateProjectRoot
     $checkoutOlderStatus = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('status', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($checkoutOlderStatus.ExitCode -eq 0 -and $checkoutOlderStatus.Output -match 'State: checkout-older' -and $checkoutOlderStatus.Output -match 'не применяйте update -Apply') -Message 'status must distinguish a hub checkout older than the project'
+    Assert-True -Condition ($checkoutOlderStatus.ExitCode -eq 0 -and $checkoutOlderStatus.Output -match 'State: checkout-older' -and $checkoutOlderStatus.Output -match 'Не выполняйте update -Apply') -Message 'status must distinguish a hub checkout older than the project'
     $checkoutOlderDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($checkoutOlderDoctor.ExitCode -eq 0 -and $checkoutOlderDoctor.Output -match '\[WARN\].*старее revision проекта' -and $checkoutOlderDoctor.Output -notmatch '\[ERROR\]') -Message 'doctor must warn when checkout is older and still validate the lock snapshot'
+    Assert-True -Condition ($checkoutOlderDoctor.ExitCode -eq 0 -and $checkoutOlderDoctor.Output -match '\[WARN\].*старее версии проекта' -and $checkoutOlderDoctor.Output -notmatch '\[ERROR\]') -Message 'doctor must warn when checkout is older and still validate the lock snapshot'
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $checkoutOlderSnapshot) -Message 'checkout-older status and doctor must remain read-only'
 
     & git -C $cleanHubRoot checkout --quiet -b relation-diverged $initialCleanHubRevision
@@ -913,7 +913,7 @@ try {
     $checkoutDivergedStatus = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('status', '-ProjectRoot', $updateProjectRoot)
     Assert-True -Condition ($checkoutDivergedStatus.ExitCode -eq 0 -and $checkoutDivergedStatus.Output -match 'State: checkout-diverged') -Message 'status must distinguish diverged histories'
     $checkoutDivergedDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($checkoutDivergedDoctor.ExitCode -eq 0 -and $checkoutDivergedDoctor.Output -match '\[WARN\].*расходятся' -and $checkoutDivergedDoctor.Output -notmatch '\[ERROR\]') -Message 'doctor must warn for diverged histories after validating lock integrity'
+    Assert-True -Condition ($checkoutDivergedDoctor.ExitCode -eq 0 -and $checkoutDivergedDoctor.Output -match '\[WARN\].*разных ветках истории' -and $checkoutDivergedDoctor.Output -notmatch '\[ERROR\]') -Message 'doctor must warn for diverged histories after validating lock integrity'
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $checkoutDivergedSnapshot) -Message 'checkout-diverged status and doctor must remain read-only'
     & git -C $cleanHubRoot checkout --quiet --detach $secondCleanHubRevision
     Assert-True -Condition ($LASTEXITCODE -eq 0) -Message 'relation fixture must restore the project revision checkout'
@@ -936,7 +936,7 @@ try {
     Add-Content -LiteralPath $updateManagedCorePath -Value 'damage while revision is unavailable' -Encoding UTF8
     $unavailableDamageSnapshot = Get-TreeSnapshot -Root $updateProjectRoot
     $unavailableDamageDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($unavailableDamageDoctor.ExitCode -ne 0 -and $unavailableDamageDoctor.Output -match 'Managed-файл изменён вне AI Rules Hub') -Message 'unavailable revision must not hide managed snapshot damage'
+    Assert-True -Condition ($unavailableDamageDoctor.ExitCode -ne 0 -and $unavailableDamageDoctor.Output -match 'Управляемый файл изменён вручную') -Message 'unavailable revision must not hide managed snapshot damage'
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $unavailableDamageSnapshot) -Message 'doctor must not repair damage when revision is unavailable'
     [System.IO.File]::WriteAllBytes($updateManagedCorePath, $originalManagedCoreBytes)
     [System.IO.File]::WriteAllBytes($updateManifestPath, $relationManifestBytes)

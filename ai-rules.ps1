@@ -139,11 +139,11 @@ function Get-ManifestRevision {
 
     $manifestPath = Join-Path $ResolvedProjectRoot '.ai-rules/manifest.json'
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
-        throw "Manifest не найден: $manifestPath"
+        throw "Файл .ai-rules/manifest.json не найден: $manifestPath"
     }
     $manifest = Get-JsonFile -Path $manifestPath
     if ($null -eq $manifest.source -or $null -eq $manifest.source.PSObject.Properties['revision']) {
-        throw 'В manifest отсутствует обязательное поле source.revision.'
+        throw 'В .ai-rules/manifest.json отсутствует обязательное поле source.revision.'
     }
     if ($null -eq $manifest.source.revision) {
         return $null
@@ -157,45 +157,45 @@ function Write-StateResult {
         [Parameter(Mandatory = $true)][string]$ResolvedProjectRoot
     )
 
-    Write-Host "State: $State"
     switch ($State) {
         'not-initialized' {
-            Write-Host 'Описание: проект ещё не подключён к AI Rules Hub.'
-            Write-Host "Next: .\ai-rules.ps1 init -ProjectRoot `"$ResolvedProjectRoot`" -Profiles <profile>"
+            Write-Host 'Состояние: правила ещё не подключены.'
+            Write-Host "Следующий шаг: .\ai-rules.ps1 prompt connect -ProjectRoot `"$ResolvedProjectRoot`""
         }
         'unpinned' {
-            Write-Host 'Описание: проект подготовлен, но ещё не закреплён за воспроизводимой revision.'
-            Write-Host "Next: заполните локальные файлы и выполните .\ai-rules.ps1 update -ProjectRoot `"$ResolvedProjectRoot`" -Apply"
+            Write-Host 'Состояние: проект подготовлен, но правила ещё не применены.'
+            Write-Host "Следующий шаг: .\ai-rules.ps1 update -ProjectRoot `"$ResolvedProjectRoot`" -Apply"
         }
         'update-available' {
-            Write-Host 'Описание: текущий checkout хаба содержит более новую revision.'
-            Write-Host "Next: просмотрите переход через .\ai-rules.ps1 update -ProjectRoot `"$ResolvedProjectRoot`""
+            Write-Host 'Состояние: доступны новые правила.'
+            Write-Host "Следующий шаг: .\ai-rules.ps1 update -ProjectRoot `"$ResolvedProjectRoot`""
         }
         'checkout-older' {
-            Write-Host 'Описание: checkout хаба старее revision, установленной в проекте.'
-            Write-Host 'Next: получите нужную версию хаба или явно переключите checkout; не применяйте update -Apply без намеренного отката.'
+            Write-Host 'Состояние: локальная копия хаба старее правил проекта.'
+            Write-Host 'Следующий шаг: получите нужную версию хаба. Не выполняйте update -Apply, если не хотите откатить правила.'
         }
         'checkout-diverged' {
-            Write-Host 'Описание: revision проекта и текущий checkout хаба находятся в расходящихся историях.'
-            Write-Host 'Next: проверьте ветку и историю локального checkout хаба перед обновлением проекта.'
+            Write-Host 'Состояние: версии проекта и хаба находятся в разных ветках истории.'
+            Write-Host 'Следующий шаг: проверьте ветку и историю хаба перед обновлением.'
         }
         'checkout-mismatch' {
-            Write-Host 'Описание: отношение revision проекта и checkout хаба надёжно определить не удалось.'
-            Write-Host 'Next: получите или переключите checkout на revision проекта либо нужную целевую revision.'
+            Write-Host 'Состояние: сравнить версии проекта и хаба не удалось.'
+            Write-Host 'Следующий шаг: получите версию хаба, которая указана в проекте.'
         }
         'synchronized' {
-            Write-Host 'Описание: проект синхронизирован с текущей revision хаба.'
-            Write-Host 'Next: действий не требуется.'
+            Write-Host 'Состояние: правила подключены и не требуют обновления.'
+            Write-Host 'Следующий шаг: действий не требуется.'
         }
         'inconsistent' {
-            Write-Host 'Описание: подключение содержит противоречие или незавершённое managed-состояние.'
-            Write-Host "Next: .\ai-rules.ps1 doctor -ProjectRoot `"$ResolvedProjectRoot`""
+            Write-Host 'Состояние: подключение требует проверки.'
+            Write-Host "Следующий шаг: .\ai-rules.ps1 doctor -ProjectRoot `"$ResolvedProjectRoot`""
         }
         default {
-            Write-Host 'Описание: состояние подключения не распознано.'
-            Write-Host "Next: .\ai-rules.ps1 doctor -ProjectRoot `"$ResolvedProjectRoot`""
+            Write-Host 'Состояние: результат не распознан.'
+            Write-Host "Следующий шаг: .\ai-rules.ps1 doctor -ProjectRoot `"$ResolvedProjectRoot`""
         }
     }
+    Write-Host "State: $State"
 }
 
 function Show-Status {
@@ -205,22 +205,11 @@ function Show-Status {
     $assessment = Get-AiRulesStatusAssessment -ProjectState $projectState
 
     Write-Host "Проект: $($projectState.ProjectName)"
-    Write-Host "Корень проекта: $($projectState.ProjectRoot)"
-    Write-Host "Manifest: $(if ($projectState.Found.Manifest) { 'найден' } else { 'отсутствует' })"
-    Write-Host "Lock: $(if ($projectState.Found.Lock) { 'найден' } else { 'отсутствует' })"
-    Write-Host "Managed-каталог: $(if ($projectState.Found.ManagedRoot) { 'найден' } else { 'отсутствует' })"
-    Write-Host ''
-    Write-Host "Revision хаба: $($projectState.HubState.Revision)"
-    Write-Host "Checkout хаба изменён: $($projectState.HubState.Dirty.ToString().ToLowerInvariant())"
-    Write-Host ''
-    Write-Host "Revision manifest: $(if ([string]::IsNullOrWhiteSpace($projectState.ManifestRevision)) { 'не закреплена' } else { $projectState.ManifestRevision })"
-    Write-Host "Revision lock: $(if ([string]::IsNullOrWhiteSpace($projectState.LockRevision)) { 'отсутствует' } else { $projectState.LockRevision })"
-    Write-Values -Label 'Профили (Profiles)' -Values $projectState.Profiles
-    Write-Values -Label 'Прямые темы (Direct topics)' -Values $projectState.DirectTopics
-    Write-Values -Label 'Итоговые темы (Effective topics)' -Values $projectState.EffectiveTopics
-    Write-Host ''
     foreach ($warning in @($assessment.Warnings)) { Write-Host "Предупреждение: $warning" }
-    foreach ($diagnostic in @($assessment.Diagnostics)) { Write-Host "Диагностика: $diagnostic" }
+    if (@($assessment.Diagnostics).Count -gt 0) {
+        Write-Host 'Подробности:'
+        foreach ($diagnostic in @($assessment.Diagnostics)) { Write-Host "- $diagnostic" }
+    }
     Write-StateResult -State $assessment.State -ResolvedProjectRoot $ResolvedProjectRoot
     return
 }
@@ -278,7 +267,7 @@ function Invoke-ProjectDoctor {
     Write-Host ''
 
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
-        Add-DoctorResult -Level 'ERROR' -Message 'Manifest .ai-rules/manifest.json не найден.' -Errors $errors -Warnings $warnings
+        Add-DoctorResult -Level 'ERROR' -Message 'Файл .ai-rules/manifest.json не найден.' -Errors $errors -Warnings $warnings
     }
     else {
         try {
@@ -287,7 +276,7 @@ function Invoke-ProjectDoctor {
             }
             $manifest = $projectState.Manifest
             if ($manifest.schemaVersion -ne '0.2') {
-                Add-DoctorResult -Level 'ERROR' -Message "Manifest использует неподдерживаемую schemaVersion: $($manifest.schemaVersion)." -Errors $errors -Warnings $warnings
+                Add-DoctorResult -Level 'ERROR' -Message "В .ai-rules/manifest.json указана неподдерживаемая schemaVersion: $($manifest.schemaVersion)." -Errors $errors -Warnings $warnings
             }
             elseif (
                 $null -eq $manifest.PSObject.Properties['source'] -or
@@ -297,15 +286,15 @@ function Invoke-ProjectDoctor {
                 $null -eq $manifest.source.PSObject.Properties['revision'] -or
                 [string]$manifest.source.repository -ne 'ai-rules-hub'
             ) {
-                Add-DoctorResult -Level 'ERROR' -Message 'Manifest не содержит обязательные source, profiles и topics.' -Errors $errors -Warnings $warnings
+                Add-DoctorResult -Level 'ERROR' -Message 'В .ai-rules/manifest.json отсутствуют обязательные поля source, profiles или topics.' -Errors $errors -Warnings $warnings
             }
             else {
                 $manifestValid = $true
-                Add-DoctorResult -Level 'OK' -Message 'Manifest найден и валиден.' -Errors $errors -Warnings $warnings
+                Add-DoctorResult -Level 'OK' -Message '.ai-rules/manifest.json заполнен корректно.' -Errors $errors -Warnings $warnings
                 try {
                     Assert-AiRulesSelections -Catalog $catalog -SelectedProfiles @($manifest.profiles) -SelectedTopics @($manifest.topics)
                     $selectionsValid = $true
-                    Add-DoctorResult -Level 'OK' -Message 'Все profiles и topics известны catalog.' -Errors $errors -Warnings $warnings
+                    Add-DoctorResult -Level 'OK' -Message 'Все профили и темы известны хабу.' -Errors $errors -Warnings $warnings
                 }
                 catch {
                     Add-DoctorResult -Level 'ERROR' -Message $_.Exception.Message -Errors $errors -Warnings $warnings
@@ -315,14 +304,14 @@ function Invoke-ProjectDoctor {
                     $manifestRevision = [string]$manifest.source.revision
                 }
                 if ([string]::IsNullOrWhiteSpace($manifestRevision)) {
-                    Add-DoctorResult -Level 'WARN' -Message 'Revision пока не закреплена; первое применение выполняется через update -Apply.' -Errors $errors -Warnings $warnings
+                    Add-DoctorResult -Level 'WARN' -Message 'Версия правил ещё не закреплена. Для первого применения используйте update -Apply.' -Errors $errors -Warnings $warnings
                 }
                 elseif ($manifestRevision -notmatch '^[0-9a-fA-F]{40}$') {
-                    Add-DoctorResult -Level 'ERROR' -Message 'Revision manifest должна быть полным 40-символьным Git SHA.' -Errors $errors -Warnings $warnings
+                    Add-DoctorResult -Level 'ERROR' -Message 'Поле source.revision должно содержать полный 40-символьный SHA Git.' -Errors $errors -Warnings $warnings
                 }
                 else {
                     $pinned = $true
-                    Add-DoctorResult -Level 'OK' -Message 'Revision закреплена полным Git SHA.' -Errors $errors -Warnings $warnings
+                    Add-DoctorResult -Level 'OK' -Message 'Версия правил закреплена полным SHA Git.' -Errors $errors -Warnings $warnings
                 }
             }
         }
@@ -353,7 +342,7 @@ function Invoke-ProjectDoctor {
             }
             $lock = $projectState.Lock
             if ($lock.schemaVersion -ne '0.2') {
-                Add-DoctorResult -Level 'ERROR' -Message "Lock использует неподдерживаемую schemaVersion: $($lock.schemaVersion)." -Errors $errors -Warnings $warnings
+                Add-DoctorResult -Level 'ERROR' -Message "В .ai-rules/lock.json указана неподдерживаемая schemaVersion: $($lock.schemaVersion)." -Errors $errors -Warnings $warnings
             }
             elseif (
                 [string]$lock.manifest -ne '.ai-rules/manifest.json' -or
@@ -361,11 +350,11 @@ function Invoke-ProjectDoctor {
                 $null -eq $lock.PSObject.Properties['source'] -or
                 $null -eq $lock.PSObject.Properties['files']
             ) {
-                Add-DoctorResult -Level 'ERROR' -Message 'Lock содержит неподдерживаемые пути manifest или managedRoot.' -Errors $errors -Warnings $warnings
+                Add-DoctorResult -Level 'ERROR' -Message 'В .ai-rules/lock.json указаны неподдерживаемые пути manifest или managedRoot.' -Errors $errors -Warnings $warnings
             }
             else {
                 $lockValid = $true
-                Add-DoctorResult -Level 'OK' -Message 'Lock найден и валиден.' -Errors $errors -Warnings $warnings
+                Add-DoctorResult -Level 'OK' -Message '.ai-rules/lock.json заполнен корректно.' -Errors $errors -Warnings $warnings
             }
         }
         catch {
@@ -378,7 +367,7 @@ function Invoke-ProjectDoctor {
 
     if ($pinned) {
         if (Test-Path -LiteralPath $upstreamRoot -PathType Container) {
-            Add-DoctorResult -Level 'OK' -Message 'Managed-каталог .ai-rules/upstream найден.' -Errors $errors -Warnings $warnings
+            Add-DoctorResult -Level 'OK' -Message 'Каталог общих правил .ai-rules/upstream найден.' -Errors $errors -Warnings $warnings
         }
         else {
             Add-DoctorResult -Level 'ERROR' -Message 'Для закреплённого проекта отсутствует .ai-rules/upstream.' -Errors $errors -Warnings $warnings
@@ -386,20 +375,20 @@ function Invoke-ProjectDoctor {
     }
     if ($pinned -and $lockValid) {
         if ([string]$lock.source.revision -eq $manifestRevision) {
-            Add-DoctorResult -Level 'OK' -Message 'Revision manifest и lock согласованы.' -Errors $errors -Warnings $warnings
+            Add-DoctorResult -Level 'OK' -Message 'Версии в manifest.json и lock.json совпадают.' -Errors $errors -Warnings $warnings
         }
         else {
-            Add-DoctorResult -Level 'ERROR' -Message 'Revision manifest и lock не совпадают.' -Errors $errors -Warnings $warnings
+            Add-DoctorResult -Level 'ERROR' -Message 'Версии в manifest.json и lock.json не совпадают.' -Errors $errors -Warnings $warnings
         }
         $expectedTopics = @(Get-AiRulesEffectiveTopics -Catalog $catalog -SelectedProfiles @($manifest.profiles) -SelectedTopics @($manifest.topics) | Sort-Object -Unique)
         $lockTopics = @($lock.topics | ForEach-Object { [string]$_ } | Sort-Object -Unique)
         if (($expectedTopics -join "`n") -ne ($lockTopics -join "`n")) {
-            Add-DoctorResult -Level 'ERROR' -Message 'Итоговые темы manifest и lock не совпадают.' -Errors $errors -Warnings $warnings
+            Add-DoctorResult -Level 'ERROR' -Message 'Итоговые темы в manifest.json и lock.json не совпадают.' -Errors $errors -Warnings $warnings
         }
         $expectedProfiles = @($manifest.profiles | ForEach-Object { [string]$_ } | Sort-Object -Unique)
         $lockProfiles = @($lock.profiles | ForEach-Object { [string]$_ } | Sort-Object -Unique)
         if (($expectedProfiles -join "`n") -ne ($lockProfiles -join "`n")) {
-            Add-DoctorResult -Level 'ERROR' -Message 'Профили manifest и lock не совпадают.' -Errors $errors -Warnings $warnings
+            Add-DoctorResult -Level 'ERROR' -Message 'Профили в manifest.json и lock.json не совпадают.' -Errors $errors -Warnings $warnings
         }
     }
     if ($lockValid) {
@@ -451,10 +440,10 @@ function Invoke-ProjectDoctor {
         $userContent = Get-Content -LiteralPath $placeholderFile.Path -Raw -Encoding UTF8
         $remaining = @(Get-TemplatePlaceholders -TemplatePath $placeholderFile.Template | Where-Object { $userContent.Contains($_) })
         if ($remaining.Count -gt 0) {
-            Add-DoctorResult -Level 'WARN' -Message "В $($placeholderFile.Label) остались placeholders: $($remaining -join ', ')." -Errors $errors -Warnings $warnings
+            Add-DoctorResult -Level 'WARN' -Message "В $($placeholderFile.Label) остались незаполненные места: $($remaining -join ', ')." -Errors $errors -Warnings $warnings
         }
         else {
-            Add-DoctorResult -Level 'OK' -Message "В $($placeholderFile.Label) нет известных placeholders." -Errors $errors -Warnings $warnings
+            Add-DoctorResult -Level 'OK' -Message "В $($placeholderFile.Label) нет известных незаполненных мест." -Errors $errors -Warnings $warnings
         }
     }
 
@@ -462,7 +451,7 @@ function Invoke-ProjectDoctor {
         $rulesetContent = Get-Content -LiteralPath $rulesetPath -Raw -Encoding UTF8
         $rulesetResults = @(Get-AiRulesRulesetConsistencyResults -Catalog $catalog -Manifest $manifest -Content $rulesetContent)
         if ($rulesetResults.Count -eq 0) {
-            Add-DoctorResult -Level 'OK' -Message 'Manifest и RULESET.md согласованы по profiles и прямым topics.' -Errors $errors -Warnings $warnings
+            Add-DoctorResult -Level 'OK' -Message 'manifest.json и RULESET.md согласованы по профилям и дополнительным темам.' -Errors $errors -Warnings $warnings
         }
         else {
             foreach ($rulesetResult in $rulesetResults) {
@@ -479,19 +468,19 @@ function Invoke-ProjectDoctor {
                 switch ($revisionRelation.Relation) {
                     'ahead' {
                         $canRunPlan = $false
-                        Add-DoctorResult -Level 'WARN' -Message 'Текущий checkout хаба содержит более новую revision; установленный snapshot проверен отдельно по lock.' -Errors $errors -Warnings $warnings
+                        Add-DoctorResult -Level 'WARN' -Message 'В локальной копии хаба есть более новая версия. Установленные файлы проверены отдельно по lock.json.' -Errors $errors -Warnings $warnings
                     }
                     'behind' {
                         $canRunPlan = $false
-                        Add-DoctorResult -Level 'WARN' -Message 'Checkout хаба старее revision проекта; update -Apply без намерения приведёт к откату.' -Errors $errors -Warnings $warnings
+                        Add-DoctorResult -Level 'WARN' -Message 'Локальная копия хаба старее версии проекта. update -Apply приведёт к откату правил.' -Errors $errors -Warnings $warnings
                     }
                     'diverged' {
                         $canRunPlan = $false
-                        Add-DoctorResult -Level 'WARN' -Message 'Revision проекта и checkout хаба расходятся; проверьте ветку и историю перед обновлением.' -Errors $errors -Warnings $warnings
+                        Add-DoctorResult -Level 'WARN' -Message 'Версии проекта и хаба находятся в разных ветках истории. Проверьте их перед обновлением.' -Errors $errors -Warnings $warnings
                     }
                     'unavailable' {
                         $canRunPlan = $false
-                        Add-DoctorResult -Level 'WARN' -Message "Revision проекта недоступна локально; managed Plan пропущен, snapshot проверен по lock. $($revisionRelation.Detail)" -Errors $errors -Warnings $warnings
+                        Add-DoctorResult -Level 'WARN' -Message "Версия проекта недоступна локально. План пропущен, установленные файлы проверены по lock.json. $($revisionRelation.Detail)" -Errors $errors -Warnings $warnings
                     }
                 }
             }
@@ -503,37 +492,37 @@ function Invoke-ProjectDoctor {
         if ($canRunPlan) {
             $syncPlan = $projectState.SyncPlan
             if (-not [string]::IsNullOrWhiteSpace($projectState.SyncPlanError)) {
-                Add-DoctorResult -Level 'ERROR' -Message "Не удалось построить managed Plan: $($projectState.SyncPlanError)." -Errors $errors -Warnings $warnings
+                Add-DoctorResult -Level 'ERROR' -Message "Не удалось построить план: $($projectState.SyncPlanError)." -Errors $errors -Warnings $warnings
             }
             if ($null -ne $syncPlan) {
                 $summary = $syncPlan.Summary
                 if ($summary.Contains('conflict')) {
-                    Add-DoctorResult -Level 'ERROR' -Message "Managed Plan обнаружил conflict: $($summary['conflict'])." -Errors $errors -Warnings $warnings
+                    Add-DoctorResult -Level 'ERROR' -Message "План обнаружил конфликт (`conflict`): $($summary['conflict'])." -Errors $errors -Warnings $warnings
                 }
                 foreach ($pendingAction in @('add', 'update')) {
                     if ($summary.Contains($pendingAction)) {
                         if ($pinned) {
-                            Add-DoctorResult -Level 'ERROR' -Message "Для текущей закреплённой revision обнаружено pending-состояние ${pendingAction}: $($summary[$pendingAction])." -Errors $errors -Warnings $warnings
+                            Add-DoctorResult -Level 'ERROR' -Message "Для закреплённой версии осталось действие ${pendingAction}: $($summary[$pendingAction])." -Errors $errors -Warnings $warnings
                         }
                         else {
-                            Add-DoctorResult -Level 'OK' -Message "Предварительный Plan: ${pendingAction}=$($summary[$pendingAction])." -Errors $errors -Warnings $warnings
+                            Add-DoctorResult -Level 'OK' -Message "Предварительный план: ${pendingAction}=$($summary[$pendingAction])." -Errors $errors -Warnings $warnings
                         }
                     }
                 }
                 foreach ($orphanAction in @('orphan', 'orphan-modified', 'orphan-missing')) {
                     if ($summary.Contains($orphanAction)) {
-                        Add-DoctorResult -Level 'WARN' -Message "Managed Plan обнаружил ${orphanAction}: $($summary[$orphanAction])." -Errors $errors -Warnings $warnings
+                        Add-DoctorResult -Level 'WARN' -Message "План обнаружил ${orphanAction}: $($summary[$orphanAction])." -Errors $errors -Warnings $warnings
                     }
                 }
                 if ($summary.Contains('unchanged') -and $summary.Count -eq 1) {
-                    Add-DoctorResult -Level 'OK' -Message "Managed-файлы синхронизированы: unchanged=$($summary['unchanged'])." -Errors $errors -Warnings $warnings
+                    Add-DoctorResult -Level 'OK' -Message "Все файлы правил совпадают: unchanged=$($summary['unchanged'])." -Errors $errors -Warnings $warnings
                 }
             }
         }
     }
 
     Write-Host ''
-    Write-Host 'Doctor проверяет целостность подключения AI Rules Hub.'
+    Write-Host 'Команда doctor проверяет только подключение правил.'
     Write-Host 'Успешный результат не означает соответствие всего проекта всем выбранным правилам.'
     Write-Host ''
     if ($errors.Count -gt 0) {
@@ -552,8 +541,8 @@ function Invoke-HubDoctor {
     $failed = $false
     foreach ($step in @(
         [pscustomobject]@{ Name = 'Структура хаба'; Kind = 'script'; Path = (Join-Path $hubRoot 'scripts/check-hub.ps1') },
-        [pscustomobject]@{ Name = 'Тесты tooling'; Kind = 'script'; Path = (Join-Path $hubRoot 'tests/test-tooling.ps1') },
-        [pscustomobject]@{ Name = 'Проверка diff'; Kind = 'git'; Path = $null },
+        [pscustomobject]@{ Name = 'Тесты инструментов'; Kind = 'script'; Path = (Join-Path $hubRoot 'tests/test-tooling.ps1') },
+        [pscustomobject]@{ Name = 'Проверка изменений'; Kind = 'git'; Path = $null },
         [pscustomobject]@{ Name = 'Рабочее дерево'; Kind = 'status'; Path = $null }
     )) {
         Write-Host "`n== $($step.Name) =="
@@ -590,11 +579,11 @@ function Invoke-Update {
 
     $manifestPath = Join-Path $ResolvedProjectRoot '.ai-rules/manifest.json'
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
-        throw "Manifest подключения не найден: $manifestPath"
+        throw "Файл подключения .ai-rules/manifest.json не найден: $manifestPath"
     }
     $manifest = Get-JsonFile -Path $manifestPath
     if ($null -eq $manifest.source -or $null -eq $manifest.source.PSObject.Properties['revision']) {
-        throw 'В manifest обязательно поле source.revision; для подготовки без pinning используйте null.'
+        throw 'В .ai-rules/manifest.json обязательно поле source.revision. До первого применения используйте null.'
     }
     $currentRevision = $null
     if ($null -ne $manifest.source.revision) {
@@ -602,20 +591,20 @@ function Invoke-Update {
     }
     $hubState = Get-AiRulesHubGitState -HubRoot $hubRoot
 
-    Write-Host "Текущая revision проекта: $(if ([string]::IsNullOrWhiteSpace($currentRevision)) { 'не закреплена' } else { $currentRevision })"
-    Write-Host "Базовая revision checkout: $($hubState.Revision)"
+    Write-Host "Версия правил проекта: $(if ([string]::IsNullOrWhiteSpace($currentRevision)) { 'не закреплена' } else { $currentRevision })"
+    Write-Host "Версия локального хаба: $($hubState.Revision)"
     Write-Host "Рабочее дерево хаба изменено: $($hubState.Dirty.ToString().ToLowerInvariant())"
     if ($hubState.Dirty) {
         Write-Host ''
         Write-Host 'ВНИМАНИЕ: рабочее дерево хаба содержит незакоммиченные изменения.' -ForegroundColor Yellow
         Write-Host ''
-        Write-Host 'Preview построен по текущим файлам checkout и может не соответствовать'
-        Write-Host 'только указанному commit SHA.'
+        Write-Host 'Просмотр построен по текущим файлам хаба и может включать'
+        Write-Host 'изменения, которых ещё нет в указанном коммите.'
         Write-Host ''
         Write-Host 'Применение через update -Apply заблокировано до очистки рабочего дерева.'
     }
     else {
-        Write-Host "Целевая revision хаба: $($hubState.Revision)"
+        Write-Host "Версия после обновления: $($hubState.Revision)"
     }
 
     $planArguments = @(
@@ -629,21 +618,21 @@ function Invoke-Update {
         }
         $planArguments += '-FailOnConflict'
     }
-    Write-Host "`nПредварительный Plan:"
+    Write-Host "`nПредлагаемые изменения:"
     $planResult = Invoke-ChildScript -ScriptPath $syncScriptPath -Arguments $planArguments -Capture
     Write-Host $planResult.Output.TrimEnd()
     if ($planResult.ExitCode -ne 0) {
-        throw 'Не удалось построить update Plan; файлы проекта не изменены.'
+        throw 'Не удалось подготовить обновление. Файлы проекта не изменены.'
     }
 
     if (-not $Accept) {
         Write-Host "`nФайлы проекта не изменены." -ForegroundColor Green
         if ($hubState.Dirty) {
             Write-Host 'Чтобы применить результат, сначала сохраните или отмените изменения хаба,'
-            Write-Host 'повторно выполните preview и только затем используйте -Apply.'
+            Write-Host 'повторно просмотрите изменения и только затем используйте -Apply.'
         }
         else {
-            Write-Host 'После проверки выполните ту же команду с -Apply, чтобы закрепить revision.'
+            Write-Host 'После проверки выполните ту же команду с -Apply.'
         }
         return
     }
@@ -677,13 +666,13 @@ function Invoke-Update {
         }
     }
 
-    Write-Host "`nRevision закреплена, правила применены." -ForegroundColor Green
-    Write-Host "Проверьте diff: git -C `"$ResolvedProjectRoot`" diff -- .ai-rules/manifest.json .ai-rules/lock.json .ai-rules/upstream"
+    Write-Host "`nВерсия закреплена, правила применены." -ForegroundColor Green
+    Write-Host "Проверьте изменения: git -C `"$ResolvedProjectRoot`" diff -- .ai-rules/manifest.json .ai-rules/lock.json .ai-rules/upstream"
 
     Write-Host "`nПроверка подключения:"
     $doctorExitCode = Invoke-ProjectDoctor -ResolvedProjectRoot $ResolvedProjectRoot
     if ($doctorExitCode -ne 0) {
-        throw 'Правила применены, но doctor обнаружил ошибку подключения. Проверьте сообщения выше и diff проекта.'
+        throw 'Правила применены, но проверка подключения завершилась ошибкой. Проверьте сообщения выше и изменения проекта.'
     }
 
     Write-Host "`nИтоговое состояние:"
@@ -759,13 +748,13 @@ try {
             if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
                 if ($Apply) {
                     throw @"
-Первый Plan ещё не показан. Сначала выполните connect без -Apply:
+Изменения ещё не показаны. Сначала выполните connect без -Apply:
 
 .\ai-rules.ps1 connect -ProjectRoot "$resolvedProjectRoot" -Profiles <profile>
 "@
                 }
                 if ($selectedProfiles.Count -eq 0 -and $selectedTopics.Count -eq 0) {
-                    throw 'Для нового проекта укажите хотя бы один -Profiles или -Topics. AI-агент может подобрать набор через prompt connect.'
+                    throw 'Для нового проекта укажите хотя бы один -Profiles или -Topics. ИИ-агент может подобрать набор через prompt connect.'
                 }
 
                 $catalog = Get-AiRulesCatalog -HubRoot $hubRoot
@@ -786,7 +775,7 @@ try {
                 if ($initResult.ExitCode -ne 0) {
                     throw 'Подготовка проекта завершилась ошибкой.'
                 }
-                Write-Host "`nЛокальный слой подготовлен. Теперь показан первый Plan; managed-файлы ещё не применяются."
+                Write-Host "`nЛокальные файлы подготовлены. Ни одно общее правило ещё не применено."
             }
             else {
                 if ($NoSeedProjectFiles) {
@@ -799,7 +788,7 @@ try {
                     $requestedProfiles = @($selectedProfiles | Sort-Object)
                     $requestedTopics = @($selectedTopics | Sort-Object)
                     if (($manifestProfiles -join ',') -ne ($requestedProfiles -join ',') -or ($manifestTopics -join ',') -ne ($requestedTopics -join ',')) {
-                        throw 'Проект уже инициализирован, а переданный состав отличается от manifest. Изменяйте состав явно в project-owned файлах.'
+                        throw 'Проект уже подготовлен, а переданный состав отличается от .ai-rules/manifest.json. Изменяйте состав правил явно в локальных файлах проекта.'
                     }
                 }
             }
@@ -837,9 +826,9 @@ try {
             Write-Host ''
             Write-Host '1. Просмотрите первое применение:'
             Write-Host "   .\ai-rules.ps1 update -ProjectRoot `"$resolvedProjectRoot`""
-            Write-Host '2. Примените закреплённую revision:'
+            Write-Host '2. Примените выбранную версию правил:'
             Write-Host "   .\ai-rules.ps1 update -ProjectRoot `"$resolvedProjectRoot`" -Apply"
-            Write-Host '3. Откройте целевой проект в AI-агенте и используйте запрос:'
+            Write-Host '3. Откройте целевой проект в ИИ-агенте и используйте запрос:'
             Write-Host '   .\ai-rules.ps1 prompt audit'
             Write-Host '   Общие правила переносить вручную не нужно.'
         }
@@ -854,11 +843,11 @@ try {
             $planOutput = $result.Output
             Write-Host $planOutput.TrimEnd()
             if ($result.ExitCode -ne 0) {
-                throw 'Не удалось построить sync Plan.'
+                throw 'Не удалось подготовить план синхронизации.'
             }
             if ([string]::IsNullOrWhiteSpace($manifestRevision)) {
-                Write-Host "`nManifest пока не закреплён за revision."
-                Write-Host 'Этот Plan является предварительным.'
+                Write-Host "`nВерсия правил пока не закреплена."
+                Write-Host 'Этот план является предварительным.'
                 Write-Host "`nДля первого воспроизводимого применения используйте:"
                 Write-Host ".\ai-rules.ps1 update -ProjectRoot `"$resolvedProjectRoot`" -Apply"
             }
