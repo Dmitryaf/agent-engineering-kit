@@ -104,6 +104,7 @@ try {
     $projectAuditPrompt = Get-Content -LiteralPath (Join-Path $hubRoot 'workflows/PROJECT_AUDIT_PROMPT.md') -Raw -Encoding UTF8
     $rootReadme = Get-Content -LiteralPath (Join-Path $hubRoot 'README.md') -Raw -Encoding UTF8
     $templatesReadme = Get-Content -LiteralPath (Join-Path $hubRoot 'templates/README.md') -Raw -Encoding UTF8
+    $syncReadme = Get-Content -LiteralPath (Join-Path $hubRoot 'sync/README.md') -Raw -Encoding UTF8
     $profileFiles = Get-ChildItem -LiteralPath (Join-Path $hubRoot 'profiles') -File -Filter '*.md' | Where-Object { $_.Name -ne 'README.md' }
     $standardProductProfile = Get-Content -LiteralPath (Join-Path $hubRoot 'profiles/standard-product.md') -Raw -Encoding UTF8
     $dataSensitiveProfile = Get-Content -LiteralPath (Join-Path $hubRoot 'profiles/data-sensitive.md') -Raw -Encoding UTF8
@@ -219,6 +220,7 @@ try {
     $userReadme = @($rootReadme -split '(?m)^## Hub development\s*$', 2)[0]
     Assert-True -Condition ($userReadme -match 'prompt connect' -and $userReadme -match 'return to your normal project work' -and $userReadme -match 'do not need to learn how the hub works' -and $templatesReadme -match 'workflows/PROJECT_CONNECT_PROMPT\.md' -and $templatesReadme -match 'workflows/PROJECT_AUDIT_PROMPT\.md') -Message 'onboarding docs must lead to ordinary project work without exposing hub internals'
     Assert-True -Condition ($userReadme -notmatch '(?i)manifest|lock\.json|revision|profiles|topics|workflow|effective|catalog|upstream|SyncPlan|State:' -and ([regex]::Matches($userReadme, '(?m)^## ')).Count -eq 3) -Message 'public user path must stay short and free of internal vocabulary'
+    Assert-True -Condition ($templatesReadme -match 'Обычному пользователю не нужно выбирать или копировать шаблоны вручную' -and $syncReadme -match 'Обычному пользователю этот документ не нужен' -and $syncReadme -match '`status` показывает краткое состояние.*`doctor` подробно проверяет') -Message 'internal guides must send ordinary users back to the short public path and separate status from diagnostics'
     $topicLengths = @($catalog.topics.PSObject.Properties | ForEach-Object { (Get-Content -LiteralPath (Join-Path $hubRoot ([string]$_.Value.file)) -Raw -Encoding UTF8).Length })
     Assert-True -Condition ($coreRule.Length -lt (($topicLengths | Measure-Object -Maximum).Maximum) -and $coreRule.Length -lt (($topicLengths | Measure-Object -Sum).Sum / 3)) -Message 'core must remain compact relative to thematic rules'
     Assert-True -Condition ($projectStudyRule -match 'учебных документов' -and $projectStudyRule -match 'Исходный код.*конфигурация.*история Git.*только для чтения' -and $projectStudyRule -match 'факт.*вероятный вывод.*неизвестное.*оценка' -and $projectStudyRule -match 'язык следует локальным правилам или запросу') -Message 'project-study must limit writes to study documents and distinguish confirmation statuses without a universal language'
