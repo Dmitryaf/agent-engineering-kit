@@ -61,26 +61,31 @@ function Get-AiRulesSafePath {
     return $candidate
 }
 
+function Get-AiRulesSha256Text {
+    param([Parameter(Mandatory = $true)][AllowEmptyString()][string]$Content)
+
+    $crlf = [string][char]13 + [string][char]10
+    $lf = [string][char]10
+    $cr = [string][char]13
+    $normalizedContent = $Content.Replace($crlf, $lf).Replace($cr, $lf)
+    $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
+    $bytes = $utf8WithoutBom.GetBytes($normalizedContent)
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hashBytes = $sha256.ComputeHash($bytes)
+        return (($hashBytes | ForEach-Object { $_.ToString('x2') }) -join '')
+    }
+    finally {
+        $sha256.Dispose()
+    }
+}
+
 function Get-AiRulesSha256 {
     param([Parameter(Mandatory = $true)][string]$Path)
 
     $textExtensions = @('.md', '.json', '.yml', '.yaml', '.txt')
     if ([System.IO.Path]::GetExtension($Path).ToLowerInvariant() -in $textExtensions) {
-        $content = [System.IO.File]::ReadAllText($Path)
-        $crlf = [string][char]13 + [string][char]10
-        $lf = [string][char]10
-        $cr = [string][char]13
-        $normalizedContent = $content.Replace($crlf, $lf).Replace($cr, $lf)
-        $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
-        $bytes = $utf8WithoutBom.GetBytes($normalizedContent)
-        $sha256 = [System.Security.Cryptography.SHA256]::Create()
-        try {
-            $hashBytes = $sha256.ComputeHash($bytes)
-            return (($hashBytes | ForEach-Object { $_.ToString('x2') }) -join '')
-        }
-        finally {
-            $sha256.Dispose()
-        }
+        return Get-AiRulesSha256Text -Content ([System.IO.File]::ReadAllText($Path))
     }
 
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -181,5 +186,6 @@ function ConvertTo-AiRulesJson {
 Export-ModuleMember -Function @(
     'Get-AiRulesSafePath',
     'Get-AiRulesSha256',
+    'Get-AiRulesSha256Text',
     'ConvertTo-AiRulesJson'
 )

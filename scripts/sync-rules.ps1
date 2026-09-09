@@ -249,7 +249,13 @@ try {
         }
 
         [void](Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath $item.Target -Label 'managed target')
-        Copy-Item -LiteralPath $item.SourcePath -Destination $item.TargetPath -Force
+        if ($null -ne $item.Content) {
+            $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
+            [System.IO.File]::WriteAllText($item.TargetPath, [string]$item.Content, $utf8WithoutBom)
+        }
+        else {
+            Copy-Item -LiteralPath $item.SourcePath -Destination $item.TargetPath -Force
+        }
     }
 
     if ($lockChanged) {

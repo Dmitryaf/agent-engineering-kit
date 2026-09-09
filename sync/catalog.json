@@ -1,55 +1,86 @@
 {
   "schemaVersion": "0.1",
   "core": ["rules/CORE.md"],
+  "coreMetadata": {
+    "rules/CORE.md": {
+      "kind": "core",
+      "description": "Минимальная обязательная основа для любой задачи.",
+      "readWhen": "Всегда до планирования и изменений."
+    }
+  },
   "topics": {
     "product": {
       "file": "rules/PRODUCT.md",
-      "description": "Продуктовые требования, пользовательские сценарии и безопасный язык интерфейса."
+      "kind": "rule",
+      "description": "Продуктовые требования, пользовательские сценарии и безопасный язык интерфейса.",
+      "readWhen": "При изменении пользовательского сценария, поведения продукта или UI."
     },
     "architecture-and-data": {
       "file": "rules/ARCHITECTURE_AND_DATA.md",
-      "description": "Архитектурные границы, источники истины, данные, API и миграции."
+      "kind": "rule",
+      "description": "Архитектурные границы, источники истины, данные, API и миграции.",
+      "readWhen": "При изменении архитектурных границ, данных, API, хранилища или миграций."
     },
     "implementation": {
       "file": "rules/IMPLEMENTATION.md",
-      "description": "Практики изменения кода, конфигурации, зависимостей и совместимости."
+      "kind": "rule",
+      "description": "Практики изменения кода, конфигурации, зависимостей и совместимости.",
+      "readWhen": "При изменении кода, конфигурации, зависимостей или совместимости."
     },
     "quality": {
       "file": "rules/QUALITY.md",
-      "description": "Тестирование, проверки и критерии завершения изменений."
+      "kind": "rule",
+      "description": "Тестирование, проверки и критерии завершения изменений.",
+      "readWhen": "При выборе проверок, изменении тестов или оценке готовности."
     },
     "reliability-and-operations": {
       "file": "rules/RELIABILITY_AND_OPERATIONS.md",
-      "description": "Работоспособность, деградация, наблюдаемость, восстановление и производительность эксплуатируемых систем."
+      "kind": "rule",
+      "description": "Работоспособность, деградация, наблюдаемость, восстановление и производительность эксплуатируемых систем.",
+      "readWhen": "При изменении эксплуатации, деградации, восстановления, наблюдаемости или производительности."
     },
     "security-and-privacy": {
       "file": "rules/SECURITY_AND_PRIVACY.md",
-      "description": "Секреты, доступ, чувствительные данные и граница публичного контекста."
+      "kind": "rule",
+      "description": "Секреты, доступ, чувствительные данные и граница публичного контекста.",
+      "readWhen": "При работе с доступом, секретами, чувствительными данными или публичным контекстом."
     },
     "documentation": {
       "file": "rules/DOCUMENTATION.md",
-      "description": "Структура документации, канонические документы и маршрутизация контекста."
+      "kind": "rule",
+      "description": "Структура документации, канонические документы и маршрутизация контекста.",
+      "readWhen": "При создании, изменении, аудите или публикации документации."
     },
     "git-and-delivery": {
       "file": "rules/GIT_AND_DELIVERY.md",
-      "description": "Git, коммиты, CI/CD, релизы и внешние операции."
+      "kind": "rule",
+      "description": "Git, коммиты, CI/CD, релизы и внешние операции.",
+      "readWhen": "При работе с Git, коммитами, CI/CD, выпуском, публикацией или другой внешней операцией."
     },
     "ai-collaboration": {
       "file": "rules/AI_COLLABORATION.md",
-      "description": "Режимы совместной работы с AI и сохранение контроля разработчика."
+      "kind": "rule",
+      "description": "Режимы совместной работы с AI и сохранение контроля разработчика.",
+      "readWhen": "Перед планом и реализацией средней или большой задачи либо при явном выборе режима работы с AI."
     },
     "research-and-evidence": {
       "file": "rules/RESEARCH_AND_EVIDENCE.md",
-      "description": "Исследования, проверка неизвестного и доказательные рекомендации."
+      "kind": "rule",
+      "description": "Исследования, проверка неизвестного и доказательные рекомендации.",
+      "readWhen": "При исследовании, проверке неизвестного, внешних источников или нестабильных фактов."
     },
     "project-study": {
       "file": "workflows/PROJECT_STUDY.md",
-      "description": "Рабочий процесс создания учебной документации по существующему проекту."
+      "kind": "workflow",
+      "description": "Рабочий процесс создания учебной документации по существующему проекту.",
+      "readWhen": "Только при явном выборе project-study и задаче на учебную документацию по проекту."
     }
   },
   "profiles": {
     "standard-product": {
+      "kind": "profile",
       "description": "Обычное пользовательское приложение или сервис.",
+      "readWhen": "Всегда, если профиль выбран.",
       "file": "profiles/standard-product.md",
       "topics": [
         "product",
@@ -62,7 +93,9 @@
       ]
     },
     "data-sensitive": {
+      "kind": "profile",
       "description": "Проект с личными, финансовыми, медицинскими или другими чувствительными данными.",
+      "readWhen": "Всегда, если профиль выбран.",
       "file": "profiles/data-sensitive.md",
       "topics": [
         "security-and-privacy",
@@ -72,7 +105,9 @@
       ]
     },
     "research-driven": {
+      "kind": "profile",
       "description": "Проект, решения которого зависят от исследований, данных о выполнении или неизвестных API.",
+      "readWhen": "Всегда, если профиль выбран.",
       "file": "profiles/research-driven.md",
       "topics": [
         "research-and-evidence",
@@ -83,7 +118,9 @@
       ]
     },
     "learning-project": {
+      "kind": "profile",
       "description": "Проект, в котором разработка одновременно является обучением владельца.",
+      "readWhen": "Всегда, если профиль выбран.",
       "file": "profiles/learning-project.md",
       "topics": [
         "ai-collaboration",
@@ -93,7 +130,9 @@
       ]
     },
     "public-repository": {
+      "kind": "profile",
       "description": "Репозиторий, который публикуется или готовится к публикации.",
+      "readWhen": "Всегда, если профиль выбран.",
       "file": "profiles/public-repository.md",
       "topics": [
         "security-and-privacy",

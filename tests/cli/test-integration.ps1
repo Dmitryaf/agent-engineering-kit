@@ -143,11 +143,9 @@ try {
     $rulesetIndex = $agentsTemplate.IndexOf('.ai-rules/RULESET.md')
     $projectRulesIndex = $agentsTemplate.IndexOf('.ai-rules/PROJECT_RULES.md')
     $coreIndex = $agentsTemplate.IndexOf('.ai-rules/upstream/CORE.md')
-    $profilesIndex = $agentsTemplate.IndexOf('.ai-rules/upstream/profiles/')
-    $topicsIndex = $agentsTemplate.IndexOf('.ai-rules/upstream/rules/')
-    Assert-True -Condition ($rulesetIndex -ge 0 -and $rulesetIndex -lt $projectRulesIndex -and $projectRulesIndex -lt $coreIndex -and $coreIndex -lt $profilesIndex -and $profilesIndex -lt $topicsIndex) -Message 'agent template must route RULESET, project rules, core, profiles, then task topics'
-    Assert-True -Condition ($agentsTemplate -match 'не весь `upstream/`' -and $agentsTemplate -match 'workflows/PROJECT_STUDY\.md.*явном выборе') -Message 'agent template must forbid whole-upstream reading and route project-study explicitly'
-    Assert-True -Condition ($agentsTemplate -match 'средняя или большая задача.*AI_COLLABORATION\.md' -and $agentsTemplate -match 'до плана и реализации') -Message 'agent template must load selected collaboration rules before significant task decisions'
+    $effectiveIndex = $agentsTemplate.IndexOf('.ai-rules/upstream/INDEX.md')
+    Assert-True -Condition ($rulesetIndex -ge 0 -and $rulesetIndex -lt $projectRulesIndex -and $projectRulesIndex -lt $coreIndex -and $coreIndex -lt $effectiveIndex) -Message 'agent template must route RULESET, project rules, core, then the effective index'
+    Assert-True -Condition ($agentsTemplate -match 'не весь `upstream/`' -and $agentsTemplate -match 'условие чтения' -and $agentsTemplate -notmatch 'IMPLEMENTATION\.md|PROJECT_STUDY\.md|AI_COLLABORATION\.md') -Message 'agent template must delegate task routing to the generated index without duplicating the topic list'
     Assert-True -Condition ($agentsTemplate -match 'Подключение хаба разрешает менять только' -and $agentsTemplate -match 'не разрешает менять несвязанные код, документацию, CI, лицензию или настройки' -and $agentsTemplate -match 'зафиксируй в `RULESET\.md`') -Message 'agent template must provide a scope firewall for hub adoption'
     Assert-True -Condition ($agentsTemplate -match 'читателя.*задачу.*хранения в Git.*публикации' -and $agentsTemplate -match 'канонического документа' -and $agentsTemplate -match 'минимальный локальный каталог') -Message 'agent template must route new documents through audience, purpose, storage, publication, and canonical-source decisions'
     Assert-True -Condition (([regex]::Matches($projectRulesTemplate, '(?m)^## ')).Count -eq 7 -and $projectRulesTemplate.Length -lt 2500 -and $projectRulesTemplate -notmatch '\|.*\|.*\|') -Message 'default project rules template must stay minimal'
@@ -184,13 +182,13 @@ try {
     Assert-True -Condition ($hubCheck -match 'hub/BACKLOG\.md' -and $hubCheck -match "'hub/decisions'" -and $hubCheck -match '\.local-docs/') -Message 'hub check must reject owner-only public documents and require an ignored local location'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $hubRoot 'hub/BACKLOG.md')) -and -not (Test-Path -LiteralPath (Join-Path $hubRoot 'hub/decisions'))) -Message 'owner backlog and decision history must not remain public'
     foreach ($topicProperty in $catalog.topics.PSObject.Properties) {
-        Assert-True -Condition (-not [string]::IsNullOrWhiteSpace([string]$topicProperty.Value.file) -and -not [string]::IsNullOrWhiteSpace([string]$topicProperty.Value.description)) -Message "catalog topic '$($topicProperty.Name)' must have file and description"
+        Assert-True -Condition (-not [string]::IsNullOrWhiteSpace([string]$topicProperty.Value.file) -and -not [string]::IsNullOrWhiteSpace([string]$topicProperty.Value.description) -and [string]$topicProperty.Value.kind -in @('rule', 'workflow') -and -not [string]::IsNullOrWhiteSpace([string]$topicProperty.Value.readWhen)) -Message "catalog topic '$($topicProperty.Name)' must have routing metadata"
     }
     Assert-True -Condition ($catalog.schemaVersion -eq '0.1' -and $catalog.topics.'reliability-and-operations'.file -eq 'rules/RELIABILITY_AND_OPERATIONS.md' -and -not [string]::IsNullOrWhiteSpace([string]$catalog.topics.'reliability-and-operations'.description)) -Message 'catalog schema must stay 0.1 and include the stable reliability topic with a description'
     Assert-True -Condition ($null -eq $catalog.topics.PSObject.Properties['language'] -and $null -eq $catalog.topics.PSObject.Properties['plain-language']) -Message 'plain language must not require a separate catalog topic'
     Assert-True -Condition ($rulesReadme -match 'CORE\.md.*обязателен для каждого подключённого проекта' -and $rulesReadme -match 'RELIABILITY_AND_OPERATIONS\.md' -and $rulesReadme -match 'Рабочие процессы конкретных задач') -Message 'rules index must keep CORE mandatory and route task workflows separately'
     foreach ($profileProperty in $catalog.profiles.PSObject.Properties) {
-        Assert-True -Condition (-not [string]::IsNullOrWhiteSpace([string]$profileProperty.Value.description) -and -not [string]::IsNullOrWhiteSpace([string]$profileProperty.Value.file) -and @($profileProperty.Value.topics).Count -gt 0) -Message "catalog profile '$($profileProperty.Name)' must define description, source file, and topic composition"
+        Assert-True -Condition (-not [string]::IsNullOrWhiteSpace([string]$profileProperty.Value.description) -and -not [string]::IsNullOrWhiteSpace([string]$profileProperty.Value.file) -and $profileProperty.Value.kind -eq 'profile' -and -not [string]::IsNullOrWhiteSpace([string]$profileProperty.Value.readWhen) -and @($profileProperty.Value.topics).Count -gt 0) -Message "catalog profile '$($profileProperty.Name)' must define routing metadata and topic composition"
         $profileContent = Get-Content -LiteralPath (Join-Path $hubRoot ([string]$profileProperty.Value.file)) -Raw -Encoding UTF8
         Assert-True -Condition ($profileContent -match '(?m)^## Назначение\s*$' -and $profileContent -match '(?m)^## Уникальные обязательства\s*$') -Message "profile '$($profileProperty.Name)' must contain purpose and unique obligations"
         Assert-True -Condition ($profileContent -notmatch '(?m)^##? Подключить' -and $profileContent -notmatch '\.\./rules/') -Message "profile '$($profileProperty.Name)' must not duplicate catalog composition"
@@ -409,7 +407,7 @@ try {
     $existingFilesSnapshot = Get-TreeSnapshot -Root $existingFilesProjectRoot
     $existingFilesDoctor = Invoke-HubScript -ScriptPath $cliPath -Arguments @('doctor', '-ProjectRoot', $existingFilesProjectRoot)
     Assert-True -Condition ($existingFilesDoctor.ExitCode -eq 0 -and $existingFilesDoctor.Output -match '\[WARN\]' -and $existingFilesDoctor.Output -match 'AGENTS\.md') -Message 'missing AGENTS routes must be a warning with zero exit code'
-    Assert-True -Condition ($existingFilesDoctor.Output -match 'AGENTS\.md пока не подключает выбранные профили') -Message 'unpinned project must warn when selected profiles are not routed'
+    Assert-True -Condition ($existingFilesDoctor.Output -match 'AGENTS\.md пока не подключает правила хаба' -and $existingFilesDoctor.Output -match 'INDEX\.md') -Message 'unpinned project must warn when the effective index route is missing'
     Assert-True -Condition ((Get-TreeSnapshot -Root $existingFilesProjectRoot) -eq $existingFilesSnapshot) -Message 'profile-routing warning must remain read-only'
     $existingFilesStatus = Invoke-HubScript -ScriptPath $cliPath -Arguments @('status', '-ProjectRoot', $existingFilesProjectRoot)
     $existingFilesPlan = Invoke-HubScript -ScriptPath $cliPath -Arguments @('plan', '-ProjectRoot', $existingFilesProjectRoot)
@@ -480,8 +478,10 @@ try {
     Assert-True -Condition ($applyResult.ExitCode -eq 0) -Message "first sync apply must pass: $($applyResult.Output)"
 
     $managedCorePath = Join-Path $upstreamRoot 'CORE.md'
+    $managedIndexPath = Join-Path $upstreamRoot 'INDEX.md'
     $managedProfilePath = Join-Path $upstreamRoot 'profiles/standard-product.md'
     Assert-True -Condition (Test-Path -LiteralPath $managedCorePath) -Message 'sync must copy core'
+    Assert-True -Condition (Test-Path -LiteralPath $managedIndexPath) -Message 'sync must materialize the generated effective index'
     Assert-True -Condition (Test-Path -LiteralPath $managedProfilePath) -Message 'sync must copy selected profile'
     Assert-True -Condition (Test-Path -LiteralPath (Join-Path $upstreamRoot 'rules/PRODUCT.md')) -Message 'profile must pull topic dependencies'
     Assert-True -Condition (Test-Path -LiteralPath (Join-Path $upstreamRoot 'rules/DOCUMENTATION.md')) -Message 'standard-product must pull documentation architecture rule'
@@ -492,6 +492,9 @@ try {
     Assert-True -Condition ([System.IO.File]::ReadAllText($manifestPath) -eq $manifestBeforeSync) -Message 'apply must not overwrite manifest'
     Assert-True -Condition ([System.IO.File]::ReadAllText($rulesetPath) -eq $rulesetBeforeSync) -Message 'apply must not overwrite nested RULESET.md'
     Assert-True -Condition ([System.IO.File]::ReadAllText($projectRulesPath) -eq $projectRulesBeforeSync) -Message 'apply must not overwrite nested PROJECT_RULES.md'
+    $managedIndex = Get-Content -LiteralPath $managedIndexPath -Raw -Encoding UTF8
+    Assert-True -Condition ($managedIndex -match 'Вид: `core`' -and $managedIndex -match 'Вид: `profile`' -and $managedIndex -match 'Вид: `rule`' -and $managedIndex -match 'standard-product' -and $managedIndex -match 'reliability-and-operations' -and $managedIndex -notmatch 'project-study') -Message 'effective index must contain selected routing metadata without unselected workflows'
+    Assert-True -Condition ($managedIndex -notmatch "`r" -and ([System.IO.File]::ReadAllBytes($managedIndexPath)[0..2] -join ',') -ne '239,187,191') -Message 'effective index must use LF and UTF-8 without BOM'
 
     $lock = Get-Content -LiteralPath $lockPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $hubRevision = $applyHubRevision
@@ -501,8 +504,10 @@ try {
     Assert-True -Condition ($lock.source.revision -eq $hubRevision) -Message 'lock must contain exact hub revision'
     Assert-True -Condition ($lock.source.revision -match '^[0-9a-f]{40}$') -Message 'lock revision must be a full commit SHA'
     $coreLockEntry = @($lock.files | Where-Object { $_.target -eq '.ai-rules/upstream/CORE.md' })[0]
+    $indexLockEntry = @($lock.files | Where-Object { $_.target -eq '.ai-rules/upstream/INDEX.md' })[0]
     Assert-True -Condition ($null -ne $coreLockEntry) -Message 'lock must contain managed core entry'
     Assert-True -Condition ($coreLockEntry.sha256 -eq (Get-NormalizedSha256 -Path $managedCorePath)) -Message 'lock must contain normalized managed-file SHA-256'
+    Assert-True -Condition ($indexLockEntry.source -eq 'generated/effective-index' -and $indexLockEntry.sha256 -eq (Get-NormalizedSha256 -Path $managedIndexPath)) -Message 'lock must cover the generated effective index'
 
     $secondPlan = Invoke-HubScript -ScriptPath $syncPath -Arguments @('-ProjectRoot', $projectRoot, '-Mode', 'Plan')
     Assert-True -Condition ($secondPlan.ExitCode -eq 0) -Message 'second plan must pass'
@@ -527,6 +532,13 @@ try {
     Assert-True -Condition ($conflictApply.ExitCode -ne 0) -Message 'apply must stop on locally modified managed file'
     Assert-True -Condition ((Get-Content -LiteralPath $managedCorePath -Raw -Encoding UTF8) -match 'local change') -Message 'conflicting target must remain untouched'
     Copy-Item -LiteralPath (Join-Path $hubRoot 'rules/CORE.md') -Destination $managedCorePath -Force
+
+    $managedIndexBytes = [System.IO.File]::ReadAllBytes($managedIndexPath)
+    Add-Content -LiteralPath $managedIndexPath -Value "`nlocal index change" -Encoding UTF8
+    $indexConflictApply = Invoke-HubScript -ScriptPath $syncPath -Arguments @('-ProjectRoot', $projectRoot, '-Mode', 'Apply')
+    Assert-True -Condition ($indexConflictApply.ExitCode -ne 0 -and $indexConflictApply.Output -match 'conflict') -Message 'apply must stop on a locally modified generated index'
+    Assert-True -Condition ((Get-Content -LiteralPath $managedIndexPath -Raw -Encoding UTF8) -match 'local index change') -Message 'conflicting generated index must remain untouched'
+    [System.IO.File]::WriteAllBytes($managedIndexPath, $managedIndexBytes)
 
     $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
     Add-Content -LiteralPath $managedProfilePath -Value "`nlocal profile change" -Encoding UTF8
@@ -679,7 +691,7 @@ try {
     $noProfileApply = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('update', '-ProjectRoot', $noProfileProjectRoot, '-Apply')
     Assert-True -Condition ($noProfileApply.ExitCode -eq 0) -Message "project without profiles must apply: $($noProfileApply.Output)"
     $noProfilePinnedDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $noProfileProjectRoot)
-    Assert-True -Condition ($noProfilePinnedDoctor.ExitCode -eq 0 -and $noProfilePinnedDoctor.Output -notmatch 'не подключает выбранные профили') -Message 'pinned project without profiles must not require a profile route'
+    Assert-True -Condition ($noProfilePinnedDoctor.ExitCode -eq 0 -and $noProfilePinnedDoctor.Output -match 'стандартные маршруты') -Message 'pinned project without profiles must use the same effective index route'
     $noProfileRulesetPath = Join-Path $noProfileProjectRoot '.ai-rules/RULESET.md'
     $noProfileRulesetBytes = [System.IO.File]::ReadAllBytes($noProfileRulesetPath)
     $noProfileRuleset = [System.IO.File]::ReadAllText($noProfileRulesetPath)
@@ -712,7 +724,7 @@ try {
     $connectedDoctorSnapshot = Get-TreeSnapshot -Root $updateProjectRoot
     $connectedDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
     Assert-True -Condition ($connectedDoctor.ExitCode -eq 0 -and $connectedDoctor.Output -notmatch '\[ERROR\]') -Message "doctor must accept a correctly connected pinned project: $($connectedDoctor.Output)"
-    Assert-True -Condition ($connectedDoctor.Output -match 'подключает все выбранные профили') -Message 'pinned project must accept the general profile route'
+    Assert-True -Condition ($connectedDoctor.Output -match 'AGENTS\.md содержит стандартные маршруты') -Message 'pinned project must accept the effective index route'
     Assert-True -Condition ($connectedDoctor.Output -match 'Manifest и RULESET\.md согласованы' -and $connectedDoctor.Output -notmatch 'architecture-and-data.*не объяснена') -Message 'doctor must require direct selections but not profile-derived effective topics in RULESET'
     Assert-True -Condition ($connectedDoctor.Output -match '(?m)^\[WARN\] В RULESET\.md.*<почему выбран>.*<почему подключена отдельно>' -and $connectedDoctor.Output -notmatch '(?m)^\[WARN\] В RULESET\.md.*(?:<название>|release gate)') -Message 'doctor must warn only about required RULESET decisions'
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $connectedDoctorSnapshot) -Message 'doctor must keep a connected project unchanged'
@@ -743,22 +755,13 @@ try {
     $originalAgentsBytes = [System.IO.File]::ReadAllBytes($updateAgentsPath)
     $originalAgentsText = [System.IO.File]::ReadAllText($updateAgentsPath)
 
-    $agentsWithoutProfileRoute = $originalAgentsText.Replace('.ai-rules/upstream/profiles/', '.ai-rules/upstream/MISSING_PROFILES/')
-    [System.IO.File]::WriteAllText($updateAgentsPath, $agentsWithoutProfileRoute, (New-Object System.Text.UTF8Encoding($false)))
-    $missingProfileRouteSnapshot = Get-TreeSnapshot -Root $updateProjectRoot
-    $missingProfileRouteDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($missingProfileRouteDoctor.ExitCode -ne 0 -and $missingProfileRouteDoctor.Output -match '\[ERROR\] Закреплённый проект не подключает выбранные профили AI Rules Hub' -and $missingProfileRouteDoctor.Output -match 'standard-product' -and $missingProfileRouteDoctor.Output -match 'learning-project') -Message 'pinned project without profile routing must fail and list selected profiles'
-    $missingProfileRouteStatus = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('status', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($missingProfileRouteStatus.Output -match 'State: inconsistent' -and (Get-TreeSnapshot -Root $updateProjectRoot) -eq $missingProfileRouteSnapshot) -Message 'status must report missing profile routing as inconsistent and remain read-only'
-
-    $explicitProfileRoutes = ".ai-rules/upstream/profiles/standard-product.md`n.ai-rules/upstream/profiles/learning-project.md"
-    [System.IO.File]::WriteAllText($updateAgentsPath, $originalAgentsText.Replace('.ai-rules/upstream/profiles/', $explicitProfileRoutes), (New-Object System.Text.UTF8Encoding($false)))
-    $explicitProfilesDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($explicitProfilesDoctor.ExitCode -eq 0 -and $explicitProfilesDoctor.Output -match 'подключает все выбранные профили') -Message 'pinned project must accept explicit routes to every selected profile'
-
-    [System.IO.File]::WriteAllText($updateAgentsPath, $originalAgentsText.Replace('.ai-rules/upstream/profiles/', '.ai-rules/upstream/profiles/standard-product.md'), (New-Object System.Text.UTF8Encoding($false)))
-    $partialProfilesDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
-    Assert-True -Condition ($partialProfilesDoctor.ExitCode -ne 0 -and $partialProfilesDoctor.Output -match 'не подключает выбранные профили' -and $partialProfilesDoctor.Output -match 'learning-project') -Message 'routing only one of two selected profiles must be insufficient'
+    $agentsWithoutIndexRoute = $originalAgentsText.Replace('.ai-rules/upstream/INDEX.md', '.ai-rules/upstream/MISSING_INDEX.md')
+    [System.IO.File]::WriteAllText($updateAgentsPath, $agentsWithoutIndexRoute, (New-Object System.Text.UTF8Encoding($false)))
+    $missingIndexRouteSnapshot = Get-TreeSnapshot -Root $updateProjectRoot
+    $missingIndexRouteDoctor = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('doctor', '-ProjectRoot', $updateProjectRoot)
+    Assert-True -Condition ($missingIndexRouteDoctor.ExitCode -ne 0 -and $missingIndexRouteDoctor.Output -match '\[ERROR\].*INDEX\.md') -Message 'pinned project without the effective index route must fail doctor'
+    $missingIndexRouteStatus = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('status', '-ProjectRoot', $updateProjectRoot)
+    Assert-True -Condition ($missingIndexRouteStatus.Output -match 'State: inconsistent' -and (Get-TreeSnapshot -Root $updateProjectRoot) -eq $missingIndexRouteSnapshot) -Message 'status must report missing effective index routing as inconsistent and remain read-only'
     [System.IO.File]::WriteAllBytes($updateAgentsPath, $originalAgentsBytes)
 
     $agentsWithoutCoreRoute = ([System.IO.File]::ReadAllText($updateAgentsPath)).Replace('.ai-rules/upstream/CORE.md', '.ai-rules/upstream/MISSING.md') + "`n# Existing user text"

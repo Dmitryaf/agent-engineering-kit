@@ -3,32 +3,14 @@ Import-Module (Join-Path $moduleRoot 'Contracts.psm1') -ErrorAction Stop
 Import-Module (Join-Path $moduleRoot 'PathsAndHashing.psm1') -ErrorAction Stop
 
 function Get-AiRulesAgentRouteState {
-    param(
-        [Parameter(Mandatory = $true)][string]$Content,
-        [string[]]$SelectedProfiles = @()
-    )
+    param([Parameter(Mandatory = $true)][string]$Content)
 
-    $requiredRoutes = @('.ai-rules/RULESET.md', '.ai-rules/PROJECT_RULES.md', '.ai-rules/upstream/CORE.md')
+    $requiredRoutes = @('.ai-rules/RULESET.md', '.ai-rules/PROJECT_RULES.md', '.ai-rules/upstream/CORE.md', '.ai-rules/upstream/INDEX.md')
     $missingRequiredRoutes = @($requiredRoutes | Where-Object { -not $Content.Contains($_) })
-    $profiles = @($SelectedProfiles | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)
-    $generalProfileRoutePattern = [regex]::Escape('.ai-rules/upstream/profiles/') + '(?![A-Za-z0-9_.-])'
-    $hasGeneralProfileRoute = [regex]::IsMatch($Content, $generalProfileRoutePattern)
-    $missingProfileRoutes = @()
-    if ($profiles.Count -gt 0 -and -not $hasGeneralProfileRoute) {
-        $missingProfileRoutes = @(
-            foreach ($profile in $profiles) {
-                $route = ".ai-rules/upstream/profiles/$profile.md"
-                if (-not $Content.Contains($route)) { $route }
-            }
-        )
-    }
 
     return [pscustomobject]@{
         RequiredRoutes = $requiredRoutes
         MissingRequiredRoutes = $missingRequiredRoutes
-        ProfileRoutingRequired = $profiles.Count -gt 0
-        ProfileRoutingPresent = $profiles.Count -eq 0 -or $hasGeneralProfileRoute -or $missingProfileRoutes.Count -eq 0
-        MissingProfileRoutes = $missingProfileRoutes
     }
 }
 
@@ -241,9 +223,8 @@ function Get-AiRulesStatusAssessment {
         $diagnostics.Add('для закреплённого проекта отсутствует корневой AGENTS.md.')
     }
     else {
-        $routes = Get-AiRulesAgentRouteState -Content (Get-Content -LiteralPath $ProjectState.Paths.Agents -Raw -Encoding UTF8) -SelectedProfiles $ProjectState.Profiles
+        $routes = Get-AiRulesAgentRouteState -Content (Get-Content -LiteralPath $ProjectState.Paths.Agents -Raw -Encoding UTF8)
         if ($routes.MissingRequiredRoutes.Count -gt 0) { $diagnostics.Add("закреплённый проект не подключает обязательные маршруты AI Rules Hub: $($routes.MissingRequiredRoutes -join ', ').") }
-        if (-not $routes.ProfileRoutingPresent) { $diagnostics.Add("закреплённый проект не подключает выбранные профили AI Rules Hub: $($ProjectState.Profiles -join ', ').") }
     }
     if (-not $ProjectState.Found.Ruleset) { $diagnostics.Add('для закреплённого проекта отсутствует .ai-rules/RULESET.md.') }
     if (-not $ProjectState.Found.ProjectRules) { $diagnostics.Add('для закреплённого проекта отсутствует .ai-rules/PROJECT_RULES.md.') }

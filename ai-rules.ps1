@@ -414,8 +414,7 @@ function Invoke-ProjectDoctor {
 
     if (Test-Path -LiteralPath $agentsPath -PathType Leaf) {
         $agentsContent = Get-Content -LiteralPath $agentsPath -Raw -Encoding UTF8
-        $selectedProfiles = if ($manifestValid) { @($manifest.profiles | ForEach-Object { [string]$_ }) } else { @() }
-        $routeState = Get-AiRulesAgentRouteState -Content $agentsContent -SelectedProfiles $selectedProfiles
+        $routeState = Get-AiRulesAgentRouteState -Content $agentsContent
         if ($routeState.MissingRequiredRoutes.Count -gt 0) {
             if ($pinned) {
                 Add-DoctorResult -Level 'ERROR' -Message "Закреплённый проект не подключает обязательные маршруты AI Rules Hub. Объедините существующий AGENTS.md с templates/AGENTS.md. Отсутствуют: $($routeState.MissingRequiredRoutes -join ', ')." -Errors $errors -Warnings $warnings
@@ -428,18 +427,6 @@ function Invoke-ProjectDoctor {
             Add-DoctorResult -Level 'OK' -Message 'AGENTS.md содержит стандартные маршруты AI Rules Hub.' -Errors $errors -Warnings $warnings
         }
 
-        if (-not $routeState.ProfileRoutingPresent) {
-            if ($pinned) {
-                Add-DoctorResult -Level 'ERROR' -Message "Закреплённый проект не подключает выбранные профили AI Rules Hub. Выбраны: $($selectedProfiles -join ', '). Объедините существующий AGENTS.md с templates/AGENTS.md." -Errors $errors -Warnings $warnings
-            }
-            else {
-                Add-DoctorResult -Level 'WARN' -Message 'AGENTS.md пока не подключает выбранные профили AI Rules Hub. Объедините существующий файл с templates/AGENTS.md.' -Errors $errors -Warnings $warnings
-            }
-        }
-        elseif ($routeState.ProfileRoutingRequired) {
-            Add-DoctorResult -Level 'OK' -Message 'AGENTS.md подключает все выбранные профили AI Rules Hub.' -Errors $errors -Warnings $warnings
-        }
-
         foreach ($route in $routeState.RequiredRoutes) {
             if (-not $agentsContent.Contains($route)) {
                 continue
@@ -448,8 +435,8 @@ function Invoke-ProjectDoctor {
             if (Test-Path -LiteralPath $targetPath) {
                 continue
             }
-            if ($route -eq '.ai-rules/upstream/CORE.md' -and -not $pinned) {
-                Add-DoctorResult -Level 'WARN' -Message 'Маршрут к upstream/CORE.md станет доступен после первого update -Apply.' -Errors $errors -Warnings $warnings
+            if ($route.StartsWith('.ai-rules/upstream/') -and -not $pinned) {
+                Add-DoctorResult -Level 'WARN' -Message "Маршрут к $route станет доступен после первого update -Apply." -Errors $errors -Warnings $warnings
             }
             else {
                 Add-DoctorResult -Level 'ERROR' -Message "AGENTS.md ссылается на отсутствующий путь: $route." -Errors $errors -Warnings $warnings

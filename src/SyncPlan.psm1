@@ -3,6 +3,7 @@ Import-Module (Join-Path $moduleRoot 'PathsAndHashing.psm1') -ErrorAction Stop
 Import-Module (Join-Path $moduleRoot 'Catalog.psm1') -ErrorAction Stop
 Import-Module (Join-Path $moduleRoot 'GitState.psm1') -ErrorAction Stop
 Import-Module (Join-Path $moduleRoot 'Contracts.psm1') -ErrorAction Stop
+Import-Module (Join-Path $moduleRoot 'EffectiveIndex.psm1') -ErrorAction Stop
 
 function Get-AiRulesJsonFile {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -190,11 +191,43 @@ function Get-AiRulesSyncPlan {
             Source = $sourceRelativePath
             Target = $targetRelativePath
             SourcePath = $sourceFullPath
+            Content = $null
             TargetPath = $targetFullPath
             Sha256 = $sourceHash
             Managed = $true
         })
     }
+
+    $indexTargetRelativePath = $destinationRelative.TrimEnd('/') + '/INDEX.md'
+    $indexTargetFullPath = Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath $indexTargetRelativePath -Label 'generated index target'
+    if (-not $selectedTargets.Add($indexTargetRelativePath)) {
+        throw "Catalog source конфликтует со сгенерированным index: $indexTargetRelativePath"
+    }
+    $indexContent = New-AiRulesEffectiveIndexContent -Catalog $catalog -Manifest $manifest
+    $indexHash = Get-AiRulesSha256Text -Content $indexContent
+    $indexAction = 'add'
+    if (Test-Path -LiteralPath $indexTargetFullPath -PathType Leaf) {
+        $indexTargetHash = Get-AiRulesSha256 -Path $indexTargetFullPath
+        if ($indexTargetHash -eq $indexHash) {
+            $indexAction = 'unchanged'
+        }
+        elseif ($oldByTarget.ContainsKey($indexTargetRelativePath) -and $oldByTarget[$indexTargetRelativePath].sha256 -eq $indexTargetHash) {
+            $indexAction = 'update'
+        }
+        else {
+            $indexAction = 'conflict'
+        }
+    }
+    $entries.Add([pscustomobject]@{
+        Action = $indexAction
+        Source = 'generated/effective-index'
+        Target = $indexTargetRelativePath
+        SourcePath = $null
+        Content = $indexContent
+        TargetPath = $indexTargetFullPath
+        Sha256 = $indexHash
+        Managed = $true
+    })
 
     foreach ($oldTarget in @($oldByTarget.Keys) | Sort-Object) {
         if ($selectedTargets.Contains($oldTarget)) {
@@ -220,6 +253,7 @@ function Get-AiRulesSyncPlan {
             Source = [string]$oldByTarget[$oldTarget].source
             Target = $oldTarget
             SourcePath = $null
+            Content = $null
             TargetPath = $oldTargetFullPath
             Sha256 = [string]$oldByTarget[$oldTarget].sha256
             Managed = $false
