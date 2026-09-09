@@ -49,9 +49,9 @@ function New-AiRulesEffectiveIndexContent {
     $lines = [System.Collections.Generic.List[string]]::new()
     $lines.Add('# Индекс подключённых правил')
     $lines.Add('')
-    $lines.Add('<!-- Сгенерировано AI Rules Hub из sync/catalog.json и manifest. Не редактировать вручную. -->')
+    $lines.Add('<!-- Сгенерировано AI Rules Hub из `sync/catalog.json` и `.ai-rules/manifest.json`. Не редактировать вручную. -->')
     $lines.Add('')
-    $lines.Add('Используй этот файл как карту чтения. Источниками истины для состава и версии остаются `.ai-rules/manifest.json` и `.ai-rules/lock.json`.')
+    $lines.Add('Этот файл показывает, какие правила читать. Точный состав и версию смотри в `.ai-rules/manifest.json` и `.ai-rules/lock.json`.')
     $lines.Add('')
     $lines.Add('## Обязательная основа')
     $lines.Add('')
@@ -75,7 +75,7 @@ function New-AiRulesEffectiveIndexContent {
         $lines.Add('')
     }
 
-    $lines.Add('## Эффективные темы и процессы')
+    $lines.Add('## Подключённые темы и процессы')
     $lines.Add('')
     $topicCount = 0
     foreach ($topicProperty in $Catalog.topics.PSObject.Properties) {
