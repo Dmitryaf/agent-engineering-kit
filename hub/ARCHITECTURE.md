@@ -49,7 +49,19 @@ Core должен оставаться коротким. Правило искл
 
 `sync/catalog.json` задаёт разрешённые topics, profiles и их зависимости. Целевой `.ai-rules/manifest.json` выбирает состав, а `.ai-rules/lock.json` хранит revision и SHA-256.
 
-Корневой `ai-rules.ps1` является пользовательским маршрутизатором к initializer, Plan и Apply. Он может показывать каталог и состояние, а для update передаёт текущую revision checkout как временный Plan override; отдельного расчёта sync-плана в CLI нет.
+Корневой `ai-rules.ps1` является пользовательским адаптером команд к initializer, Plan и Apply. Он отвечает за аргументы и человекочитаемый вывод, но не вычисляет состояние из собственного вывода дочерних процессов.
+
+Внутреннее ядро находится в `src/`:
+
+- `Catalog` проверяет каталог и выбранные profiles/topics;
+- `Contracts` задаёт типизированные `AiRules.SyncPlan`, `AiRules.ProjectState` и `AiRules.Diagnostic`;
+- `PathsAndHashing` реализует безопасные пути, проверку reparse points, SHA-256 и стабильный JSON;
+- `GitState` вычисляет revision, dirty state и отношение revisions;
+- `SyncPlan` строит план только для чтения как объект без записи и вывода;
+- `ProjectState` один раз читает manifest/lock и формирует общий снимок для `status` и `doctor`;
+- `Diagnostics` преобразует снимок и локальные документы в диагностические результаты.
+
+`scripts/sync-rules.ps1` материализует уже рассчитанный `SyncPlan` и сохраняет внешний текстовый формат для пользователя. Русская строка `Summary:` остаётся частью presentation layer и не разбирается внутренним кодом как машинный контракт.
 
 ```text
 hub checkout + project manifest

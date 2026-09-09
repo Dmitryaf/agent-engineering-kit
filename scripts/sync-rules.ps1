@@ -8,272 +8,110 @@ param(
 
     [string]$RevisionOverride,
 
-    [switch]$FailOnConflict
+    [switch]$FailOnConflict,
+
+    [switch]$SuppressNextStep
 )
 
 $ErrorActionPreference = 'Stop'
 $hubRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 . (Join-Path $hubRoot 'scripts/sync-common.ps1')
+Import-Module (Join-Path $hubRoot 'src/SyncPlan.psm1') -ErrorAction Stop
 
-function Get-RelativePathFromRoot {
+function Test-AiRulesBytesEqual {
     param(
-        [Parameter(Mandatory = $true)][string]$Root,
-        [Parameter(Mandatory = $true)][string]$Path
+        [Parameter(Mandatory = $true)][byte[]]$Left,
+        [Parameter(Mandatory = $true)][byte[]]$Right
     )
 
-    $rootFullPath = [System.IO.Path]::GetFullPath($Root).TrimEnd([char[]]@('\', '/'))
-    $pathFullPath = [System.IO.Path]::GetFullPath($Path)
-    return $pathFullPath.Substring($rootFullPath.Length).TrimStart([char[]]@('\', '/')).Replace('\', '/')
+    if ($Left.Length -ne $Right.Length) {
+        return $false
+    }
+    for ($index = 0; $index -lt $Left.Length; $index++) {
+        if ($Left[$index] -ne $Right[$index]) {
+            return $false
+        }
+    }
+    return $true
 }
 
-function Get-JsonFile {
-    param([Parameter(Mandatory = $true)][string]$Path)
-
-    try {
-        return Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
-    }
-    catch {
-        throw "Некорректный JSON в ${Path}: $($_.Exception.Message)"
-    }
-}
-
-function Get-ObjectProperty {
+function New-AiRulesFileSnapshot {
     param(
-        [Parameter(Mandatory = $true)]$Object,
-        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string]$Path,
         [Parameter(Mandatory = $true)][string]$Label
     )
 
-    $property = $Object.PSObject.Properties[$Name]
-    if ($null -eq $property) {
-        throw "Неизвестное значение ${Label}: $Name"
+    if ([System.IO.Directory]::Exists($Path)) {
+        throw "$Label должен быть файлом, но является каталогом: $Path"
+    }
+    $exists = [System.IO.File]::Exists($Path)
+    return [pscustomobject]@{
+        Path = $Path
+        Exists = $exists
+        Bytes = $(if ($exists) { [System.IO.File]::ReadAllBytes($Path) } else { $null })
+        Attributes = $(if ($exists) { [System.IO.File]::GetAttributes($Path) } else { $null })
+    }
+}
+
+function Restore-AiRulesFileSnapshot {
+    param([Parameter(Mandatory = $true)]$Snapshot)
+
+    if (-not $Snapshot.Exists) {
+        if ([System.IO.Directory]::Exists($Snapshot.Path)) {
+            throw "Rollback не удаляет каталог на месте ожидаемого файла: $($Snapshot.Path)"
+        }
+        if ([System.IO.File]::Exists($Snapshot.Path)) {
+            [System.IO.File]::Delete($Snapshot.Path)
+        }
+        return
     }
 
-    return $property.Value
-}
-
-function Get-ManagedRelativePath {
-    param([Parameter(Mandatory = $true)][string]$SourceRelativePath)
-
-    $normalizedSource = $SourceRelativePath.Replace('\', '/')
-    if ($normalizedSource -eq 'rules/CORE.md') {
-        return 'CORE.md'
+    if ([System.IO.Directory]::Exists($Snapshot.Path)) {
+        throw "Rollback не может восстановить файл поверх каталога: $($Snapshot.Path)"
+    }
+    if ([System.IO.File]::Exists($Snapshot.Path)) {
+        $currentBytes = [System.IO.File]::ReadAllBytes($Snapshot.Path)
+        if (Test-AiRulesBytesEqual -Left $currentBytes -Right $Snapshot.Bytes) {
+            [System.IO.File]::SetAttributes($Snapshot.Path, $Snapshot.Attributes)
+            return
+        }
+        [System.IO.File]::SetAttributes($Snapshot.Path, [System.IO.FileAttributes]::Normal)
+    }
+    else {
+        [System.IO.Directory]::CreateDirectory((Split-Path -Parent $Snapshot.Path)) | Out-Null
     }
 
-    return $normalizedSource
+    [System.IO.File]::WriteAllBytes($Snapshot.Path, $Snapshot.Bytes)
+    [System.IO.File]::SetAttributes($Snapshot.Path, $Snapshot.Attributes)
 }
 
-$projectRootFull = (Resolve-Path -LiteralPath $ProjectRoot).Path
-$catalogPath = Join-Path $hubRoot 'sync/catalog.json'
-$catalog = Get-JsonFile -Path $catalogPath
-
-if ($catalog.schemaVersion -ne '0.1') {
-    throw "Неподдерживаемая catalog schemaVersion: $($catalog.schemaVersion)"
+if (-not [string]::IsNullOrWhiteSpace($RevisionOverride) -and $Mode -ne 'Plan') {
+    throw 'RevisionOverride поддерживается только в режиме Plan.'
 }
-
-$localRulesRoot = Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath '.ai-rules' -Label 'local rules directory'
-$manifestFullPath = Join-Path $localRulesRoot 'manifest.json'
-$destinationRoot = Join-Path $localRulesRoot 'upstream'
+$syncPlan = Get-AiRulesSyncPlan -HubRoot $hubRoot -ProjectRoot $ProjectRoot -RevisionOverride $RevisionOverride
+$projectRootFull = $syncPlan.ProjectRoot
+$catalog = $syncPlan.Catalog
+$manifest = $syncPlan.Manifest
 $destinationRelative = '.ai-rules/upstream'
-$lockPath = Join-Path $localRulesRoot 'lock.json'
+$manifestFullPath = Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath '.ai-rules/manifest.json' -Label 'sync manifest'
+$lockPath = Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath '.ai-rules/lock.json' -Label 'sync lock'
+$revision = $syncPlan.HubRevision
+$sourceDirty = $syncPlan.HubDirty
+$expectedRevision = $syncPlan.ExpectedRevision
+$previousLock = $syncPlan.PreviousLock
+$selectedTopics = @($syncPlan.Topics)
+$plan = @($syncPlan.Entries)
 
-if (-not (Test-Path -LiteralPath $manifestFullPath -PathType Leaf)) {
-    throw "Sync manifest не найден: $manifestFullPath"
-}
-
-$manifest = Get-JsonFile -Path $manifestFullPath
-if ($manifest.schemaVersion -ne '0.2') {
-    throw "Неподдерживаемая manifest schemaVersion: $($manifest.schemaVersion)"
-}
-
-foreach ($requiredProperty in @('source', 'topics', 'profiles')) {
-    if ($null -eq $manifest.PSObject.Properties[$requiredProperty]) {
-        throw "Обязательное поле manifest отсутствует: $requiredProperty"
+if ($Mode -eq 'Apply') {
+    if ([string]::IsNullOrWhiteSpace($expectedRevision)) {
+        throw 'Apply требует закреплённую source.revision с полным commit SHA; для первого применения используйте update -Apply.'
     }
-}
-
-if ($null -eq $manifest.source.PSObject.Properties['repository']) {
-    throw 'В manifest обязательно поле source.repository.'
-}
-if ([string]$manifest.source.repository -ne 'ai-rules-hub') {
-    throw "Неподдерживаемый source repository: $($manifest.source.repository)"
-}
-if ($null -eq $manifest.source.PSObject.Properties['revision']) {
-    throw 'В manifest обязательно поле source.revision; для незакреплённой подготовки используйте null.'
-}
-
-$selectedSources = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
-$selectedTopics = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
-
-foreach ($coreFile in @($catalog.core)) {
-    [void]$selectedSources.Add([string]$coreFile)
-}
-
-foreach ($topicName in @($manifest.topics)) {
-    $topic = Get-ObjectProperty -Object $catalog.topics -Name ([string]$topicName) -Label 'topic'
-    [void]$selectedTopics.Add([string]$topicName)
-    [void]$selectedSources.Add([string]$topic.file)
-}
-
-foreach ($profileName in @($manifest.profiles)) {
-    $profile = Get-ObjectProperty -Object $catalog.profiles -Name ([string]$profileName) -Label 'profile'
-    [void]$selectedSources.Add([string]$profile.file)
-
-    foreach ($topicName in @($profile.topics)) {
-        $topic = Get-ObjectProperty -Object $catalog.topics -Name ([string]$topicName) -Label 'profile topic'
-        [void]$selectedTopics.Add([string]$topicName)
-        [void]$selectedSources.Add([string]$topic.file)
-    }
-}
-
-$revision = $null
-$sourceDirty = $null
-try {
-    $revisionOutput = @(& git -C $hubRoot rev-parse HEAD 2>$null)
-    if ($LASTEXITCODE -eq 0 -and $revisionOutput.Count -gt 0) {
-        $revision = [string]$revisionOutput[0]
-    }
-
-    $dirtyOutput = @(& git -C $hubRoot status --porcelain 2>$null)
-    if ($LASTEXITCODE -eq 0) {
-        $sourceDirty = $dirtyOutput.Count -gt 0
-    }
-}
-catch {
-    $revision = $null
-    $sourceDirty = $null
-}
-
-$expectedRevision = $null
-if ($null -ne $manifest.source -and $null -ne $manifest.source.revision) {
-    $expectedRevision = [string]$manifest.source.revision
-}
-
-if (-not [string]::IsNullOrWhiteSpace($RevisionOverride)) {
-    if ($Mode -ne 'Plan') {
-        throw 'RevisionOverride поддерживается только в режиме Plan.'
-    }
-    if ($RevisionOverride -notmatch '^[0-9a-fA-F]{40}$') {
-        throw 'RevisionOverride должен быть полным 40-символьным SHA Git commit.'
-    }
-    if ([string]::IsNullOrWhiteSpace($revision)) {
-        throw 'Передан RevisionOverride, но Git revision хаба определить не удалось.'
-    }
-    if ($revision -ne $RevisionOverride) {
-        throw "RevisionOverride должен совпадать с текущим checkout хаба. Ожидалось $RevisionOverride, получено $revision."
-    }
-    $expectedRevision = $RevisionOverride
-}
-
-if (-not [string]::IsNullOrWhiteSpace($expectedRevision)) {
-    if ($expectedRevision -notmatch '^[0-9a-fA-F]{40}$') {
-        throw 'Manifest source.revision должен быть полным 40-символьным SHA Git commit.'
-    }
-    if ([string]::IsNullOrWhiteSpace($revision)) {
-        throw 'Manifest закрепляет revision, но Git revision хаба определить не удалось.'
-    }
-    if ($revision -ne $expectedRevision) {
-        throw "Revision хаба не совпадает. Ожидалось $expectedRevision, получено $revision."
-    }
-    if ($sourceDirty -eq $true -and $Mode -eq 'Apply') {
+    if ($sourceDirty -eq $true) {
         throw 'Закреплённую синхронизацию нельзя применять из изменённого checkout хаба.'
     }
-}
-
-$previousLock = $null
-$oldByTarget = @{}
-if (Test-Path -LiteralPath $lockPath -PathType Leaf) {
-    $previousLock = Get-JsonFile -Path $lockPath
-    if ($previousLock.schemaVersion -ne '0.2') {
-        throw "Неподдерживаемая lock schemaVersion: $($previousLock.schemaVersion)"
+    if ($sourceDirty -ne $false) {
+        throw 'Apply остановлен: чистоту рабочего дерева хаба определить не удалось.'
     }
-    if ([string]$previousLock.manifest -ne '.ai-rules/manifest.json') {
-        throw "Неподдерживаемый путь manifest в lock: $($previousLock.manifest)"
-    }
-    if ([string]$previousLock.managedRoot -ne $destinationRelative) {
-        throw "Неподдерживаемый managed root в lock: $($previousLock.managedRoot)"
-    }
-
-    foreach ($entry in @($previousLock.files)) {
-        $oldByTarget[[string]$entry.target] = $entry
-    }
-}
-
-$plan = [System.Collections.Generic.List[object]]::new()
-$selectedTargets = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
-
-foreach ($sourceRelativePath in @($selectedSources) | Sort-Object) {
-    $sourceFullPath = Get-AiRulesSafePath -BasePath $hubRoot -ChildPath $sourceRelativePath -Label 'catalog source'
-    if (-not (Test-Path -LiteralPath $sourceFullPath -PathType Leaf)) {
-        throw "Source из catalog не существует: $sourceRelativePath"
-    }
-
-    $managedRelativePath = Get-ManagedRelativePath -SourceRelativePath $sourceRelativePath
-    $targetFullPath = Get-AiRulesSafePath -BasePath $destinationRoot -ChildPath $managedRelativePath -Label 'managed target'
-    $targetRelativePath = Get-RelativePathFromRoot -Root $projectRootFull -Path $targetFullPath
-    if (-not $selectedTargets.Add($targetRelativePath)) {
-        throw "Несколько catalog sources ведут в один managed target: $targetRelativePath"
-    }
-
-    $sourceHash = Get-AiRulesSha256 -Path $sourceFullPath
-    $targetHash = $null
-    $action = 'add'
-
-    if (Test-Path -LiteralPath $targetFullPath -PathType Leaf) {
-        $targetHash = Get-AiRulesSha256 -Path $targetFullPath
-        if ($targetHash -eq $sourceHash) {
-            $action = 'unchanged'
-        }
-        elseif ($oldByTarget.ContainsKey($targetRelativePath) -and $oldByTarget[$targetRelativePath].sha256 -eq $targetHash) {
-            $action = 'update'
-        }
-        else {
-            $action = 'conflict'
-        }
-    }
-
-    $plan.Add([pscustomobject]@{
-        Action = $action
-        Source = $sourceRelativePath
-        Target = $targetRelativePath
-        SourcePath = $sourceFullPath
-        TargetPath = $targetFullPath
-        Sha256 = $sourceHash
-        Managed = $true
-    })
-}
-
-foreach ($oldTarget in @($oldByTarget.Keys) | Sort-Object) {
-    if ($selectedTargets.Contains($oldTarget)) {
-        continue
-    }
-
-    $managedPrefix = $destinationRelative.TrimEnd('/') + '/'
-    if (-not $oldTarget.StartsWith($managedPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "Target из lock находится вне managed-каталога upstream: $oldTarget"
-    }
-    $oldManagedRelativePath = $oldTarget.Substring($managedPrefix.Length)
-    $oldTargetFullPath = Get-AiRulesSafePath -BasePath $destinationRoot -ChildPath $oldManagedRelativePath -Label 'locked target'
-    $orphanAction = 'orphan-missing'
-    if (Test-Path -LiteralPath $oldTargetFullPath -PathType Leaf) {
-        $oldTargetHash = Get-AiRulesSha256 -Path $oldTargetFullPath
-        if ($oldTargetHash -eq $oldByTarget[$oldTarget].sha256) {
-            $orphanAction = 'orphan'
-        }
-        else {
-            $orphanAction = 'orphan-modified'
-        }
-    }
-
-    $plan.Add([pscustomobject]@{
-        Action = $orphanAction
-        Source = [string]$oldByTarget[$oldTarget].source
-        Target = $oldTarget
-        SourcePath = $null
-        TargetPath = $oldTargetFullPath
-        Sha256 = [string]$oldByTarget[$oldTarget].sha256
-        Managed = $false
-    })
 }
 
 Write-Host "Revision хаба: $revision"
@@ -302,7 +140,7 @@ if ($Mode -eq 'Plan') {
             throw "Plan остановлен: конфликтов managed-файлов, требующих ручного решения: $($planConflicts.Count)."
         }
     }
-    else {
+    elseif (-not $SuppressNextStep) {
         Write-Host 'Следующий шаг: проверьте Plan и выбранную revision, затем повторите команду с -Mode Apply.'
     }
     exit 0
@@ -311,14 +149,6 @@ if ($Mode -eq 'Plan') {
 $conflicts = @($plan | Where-Object { $_.Action -eq 'conflict' })
 if ($conflicts.Count -gt 0) {
     throw "Apply остановлен: конфликтов managed-файлов, требующих ручного решения: $($conflicts.Count)."
-}
-
-foreach ($item in @($plan | Where-Object { $_.Action -in @('add', 'update') })) {
-    $targetDirectory = Split-Path -Parent $item.TargetPath
-    if (-not (Test-Path -LiteralPath $targetDirectory)) {
-        New-Item -ItemType Directory -Path $targetDirectory -Force | Out-Null
-    }
-    Copy-Item -LiteralPath $item.SourcePath -Destination $item.TargetPath -Force
 }
 
 $lockEntries = @(
@@ -367,12 +197,99 @@ if (Test-Path -LiteralPath $lockPath -PathType Leaf) {
 if ($lockChanged) {
     $lockObject.generatedAtUtc = [DateTime]::UtcNow.ToString('o')
     $lockJson = ConvertTo-AiRulesJson -InputObject $lockObject -Depth 10
-    $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText($lockPath, $lockJson + "`n", $utf8WithoutBom)
-    Write-Host "Lock обновлён: $lockPath" -ForegroundColor Green
 }
-else {
-    Write-Host "Lock не изменён: $lockPath" -ForegroundColor Green
+
+$writeItems = @($plan | Where-Object { $_.Action -in @('add', 'update') })
+$snapshots = [System.Collections.Generic.List[object]]::new()
+foreach ($item in $writeItems) {
+    $validatedTargetPath = Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath $item.Target -Label 'managed target'
+    if ($validatedTargetPath -ne $item.TargetPath) {
+        throw "Managed target изменился после построения Plan: $($item.Target)"
+    }
+    $snapshots.Add((New-AiRulesFileSnapshot -Path $item.TargetPath -Label 'Managed target'))
+}
+if ($lockChanged) {
+    $validatedLockPath = Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath '.ai-rules/lock.json' -Label 'sync lock'
+    if ($validatedLockPath -ne $lockPath) {
+        throw 'Путь lock изменился после построения Plan.'
+    }
+    $snapshots.Add((New-AiRulesFileSnapshot -Path $lockPath -Label 'Sync lock'))
+}
+
+$createdDirectories = [System.Collections.Generic.List[string]]::new()
+try {
+    foreach ($item in $writeItems) {
+        $validatedTargetPath = Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath $item.Target -Label 'managed target'
+        if ($validatedTargetPath -ne $item.TargetPath) {
+            throw "Managed target изменился во время Apply: $($item.Target)"
+        }
+
+        $targetDirectory = Split-Path -Parent $item.TargetPath
+        if (-not [System.IO.Directory]::Exists($targetDirectory)) {
+            $missingDirectories = [System.Collections.Generic.List[string]]::new()
+            $directoryCursor = $targetDirectory
+            while (-not [System.IO.Directory]::Exists($directoryCursor)) {
+                if ([System.IO.File]::Exists($directoryCursor)) {
+                    throw "Родитель managed target должен быть каталогом: $directoryCursor"
+                }
+                $missingDirectories.Add($directoryCursor)
+                $parentDirectory = Split-Path -Parent $directoryCursor
+                if ([string]::IsNullOrWhiteSpace($parentDirectory) -or $parentDirectory -eq $directoryCursor) {
+                    throw "Не удалось определить существующий родитель для managed target: $($item.Target)"
+                }
+                $directoryCursor = $parentDirectory
+            }
+
+            foreach ($missingDirectory in @($missingDirectories | Sort-Object Length)) {
+                [System.IO.Directory]::CreateDirectory($missingDirectory) | Out-Null
+                if (-not $createdDirectories.Contains($missingDirectory)) {
+                    $createdDirectories.Add($missingDirectory)
+                }
+            }
+        }
+
+        [void](Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath $item.Target -Label 'managed target')
+        Copy-Item -LiteralPath $item.SourcePath -Destination $item.TargetPath -Force
+    }
+
+    if ($lockChanged) {
+        [void](Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath '.ai-rules/lock.json' -Label 'sync lock')
+        $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($lockPath, $lockJson + "`n", $utf8WithoutBom)
+        Write-Host "Lock обновлён: $lockPath" -ForegroundColor Green
+    }
+    else {
+        Write-Host "Lock не изменён: $lockPath" -ForegroundColor Green
+    }
+}
+catch {
+    $applyError = $_.Exception.Message
+    $rollbackErrors = [System.Collections.Generic.List[string]]::new()
+
+    for ($snapshotIndex = $snapshots.Count - 1; $snapshotIndex -ge 0; $snapshotIndex--) {
+        try {
+            Restore-AiRulesFileSnapshot -Snapshot $snapshots[$snapshotIndex]
+        }
+        catch {
+            $rollbackErrors.Add($_.Exception.Message)
+        }
+    }
+
+    foreach ($createdDirectory in @($createdDirectories | Sort-Object Length -Descending)) {
+        try {
+            if ([System.IO.Directory]::Exists($createdDirectory)) {
+                [System.IO.Directory]::Delete($createdDirectory, $false)
+            }
+        }
+        catch {
+            $rollbackErrors.Add("Не удалось удалить созданный каталог ${createdDirectory}: $($_.Exception.Message)")
+        }
+    }
+
+    if ($rollbackErrors.Count -gt 0) {
+        throw "Apply завершился ошибкой: $applyError Rollback также завершился ошибкой: $($rollbackErrors -join ' | ')"
+    }
+    throw "Apply завершился ошибкой; исходное состояние восстановлено: $applyError"
 }
 
 Write-Host 'Sync применён.' -ForegroundColor Green

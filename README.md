@@ -287,7 +287,8 @@ templates/      project-owned starter documents
 hub/            product and architecture rules for this repository
 sync/           catalog and synchronization contract
 scripts/        initializer, synchronization, and validation tools
-tests/          autonomous tooling tests
+src/            typed PowerShell core for plans, state, and diagnostics
+tests/          contract, sync, CLI, diagnostics, and policy-structure suites
 ```
 
 Before changing the hub, read [`AGENTS.md`](AGENTS.md), [`rules/CORE.md`](rules/CORE.md), [`hub/PROJECT_RULES.md`](hub/PROJECT_RULES.md), [`hub/ARCHITECTURE.md`](hub/ARCHITECTURE.md), and [`hub/COMMIT_RULES.md`](hub/COMMIT_RULES.md).

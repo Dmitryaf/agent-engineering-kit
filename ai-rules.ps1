@@ -20,11 +20,14 @@ param(
 $ErrorActionPreference = 'Stop'
 $hubRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $powerShellExe = (Get-Process -Id $PID).Path
-$catalogPath = Join-Path $hubRoot 'sync/catalog.json'
 $syncScriptPath = Join-Path $hubRoot 'scripts/sync-rules.ps1'
 $initScriptPath = Join-Path $hubRoot 'scripts/init-project-sync.ps1'
 $promptScriptPath = Join-Path $hubRoot 'scripts/show-prompt.ps1'
 . (Join-Path $hubRoot 'scripts/sync-common.ps1')
+Import-Module (Join-Path $hubRoot 'src/Catalog.psm1') -ErrorAction Stop
+Import-Module (Join-Path $hubRoot 'src/GitState.psm1') -ErrorAction Stop
+Import-Module (Join-Path $hubRoot 'src/ProjectState.psm1') -ErrorAction Stop
+Import-Module (Join-Path $hubRoot 'src/Diagnostics.psm1') -ErrorAction Stop
 
 function Write-Help {
     @'
@@ -73,50 +76,6 @@ CLI не выполняет git pull или git fetch автоматически
 '@ | Write-Host
 }
 
-function Get-Catalog {
-    $catalog = Get-Content -LiteralPath $catalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($catalog.schemaVersion -ne '0.1') {
-        throw "Неподдерживаемая версия catalog schemaVersion: $($catalog.schemaVersion)"
-    }
-    return $catalog
-}
-
-function ConvertTo-NameList {
-    param([string[]]$Values)
-
-    return @(
-        foreach ($value in @($Values)) {
-            foreach ($part in ([string]$value -split ',')) {
-                $name = $part.Trim()
-                if (-not [string]::IsNullOrWhiteSpace($name)) {
-                    $name
-                }
-            }
-        }
-    )
-}
-
-function Assert-Selections {
-    param(
-        [Parameter(Mandatory = $true)]$Catalog,
-        [string[]]$SelectedProfiles,
-        [string[]]$SelectedTopics
-    )
-
-    $availableProfiles = @($Catalog.profiles.PSObject.Properties.Name)
-    $availableTopics = @($Catalog.topics.PSObject.Properties.Name)
-    foreach ($profile in @($SelectedProfiles)) {
-        if ($profile -notin $availableProfiles) {
-            throw "Неизвестный профиль '$profile'. Доступны: $($availableProfiles -join ', ')"
-        }
-    }
-    foreach ($topic in @($SelectedTopics)) {
-        if ($topic -notin $availableTopics) {
-            throw "Неизвестная тема '$topic'. Доступны: $($availableTopics -join ', ')"
-        }
-    }
-}
-
 function Invoke-ChildScript {
     param(
         [Parameter(Mandatory = $true)][string]$ScriptPath,
@@ -141,291 +100,6 @@ function Invoke-ChildScript {
         ExitCode = $exitCode
         Output = $output
     }
-}
-
-function Invoke-GitText {
-    param([Parameter(Mandatory = $true)][string[]]$Arguments)
-
-    $previousErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    try {
-        $output = @(& git @Arguments 2>$null)
-        $exitCode = $LASTEXITCODE
-    }
-    finally {
-        $ErrorActionPreference = $previousErrorActionPreference
-    }
-    if ($exitCode -ne 0) {
-        throw "Команда Git завершилась ошибкой: git $($Arguments -join ' ')"
-    }
-    return @($output)
-}
-
-function Get-HubGitState {
-    $revisionOutput = @(Invoke-GitText -Arguments @('-C', $hubRoot, 'rev-parse', 'HEAD'))
-    $statusOutput = @(Invoke-GitText -Arguments @('-C', $hubRoot, 'status', '--porcelain'))
-    $revision = ([string]$revisionOutput[0]).Trim()
-    if ($revision -notmatch '^[0-9a-fA-F]{40}$') {
-        throw 'Не удалось определить полный 40-символьный Git SHA текущей revision хаба.'
-    }
-    return [pscustomobject]@{
-        Revision = $revision
-        Dirty = $statusOutput.Count -gt 0
-    }
-}
-
-function Test-GitAncestor {
-    param(
-        [Parameter(Mandatory = $true)][string]$Ancestor,
-        [Parameter(Mandatory = $true)][string]$Descendant
-    )
-
-    $previousErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    try {
-        & git -C $hubRoot merge-base --is-ancestor $Ancestor $Descendant 2>$null
-        $exitCode = $LASTEXITCODE
-    }
-    finally {
-        $ErrorActionPreference = $previousErrorActionPreference
-    }
-
-    if ($exitCode -eq 0) {
-        return [pscustomobject]@{ Available = $true; IsAncestor = $true; ExitCode = $exitCode }
-    }
-    if ($exitCode -eq 1) {
-        return [pscustomobject]@{ Available = $true; IsAncestor = $false; ExitCode = $exitCode }
-    }
-    return [pscustomobject]@{ Available = $false; IsAncestor = $false; ExitCode = $exitCode }
-}
-
-function Get-RevisionRelation {
-    param(
-        [Parameter(Mandatory = $true)][string]$ProjectRevision,
-        [Parameter(Mandatory = $true)][string]$HubRevision
-    )
-
-    $relation = 'unavailable'
-    $detail = $null
-    if ($ProjectRevision -eq $HubRevision) {
-        $relation = 'same'
-    }
-    elseif ($ProjectRevision -notmatch '^[0-9a-fA-F]{40}$' -or $HubRevision -notmatch '^[0-9a-fA-F]{40}$') {
-        $detail = 'Одна из revisions не является полным Git SHA.'
-    }
-    else {
-        $projectIsAncestor = Test-GitAncestor -Ancestor $ProjectRevision -Descendant $HubRevision
-        if (-not $projectIsAncestor.Available) {
-            $detail = "Git не смог проверить revision проекта (exit code $($projectIsAncestor.ExitCode))."
-        }
-        elseif ($projectIsAncestor.IsAncestor) {
-            $relation = 'ahead'
-        }
-        else {
-            $hubIsAncestor = Test-GitAncestor -Ancestor $HubRevision -Descendant $ProjectRevision
-            if (-not $hubIsAncestor.Available) {
-                $detail = "Git не смог проверить revision хаба (exit code $($hubIsAncestor.ExitCode))."
-            }
-            elseif ($hubIsAncestor.IsAncestor) {
-                $relation = 'behind'
-            }
-            else {
-                $relation = 'diverged'
-            }
-        }
-    }
-
-    return [pscustomobject]@{
-        Relation = $relation
-        ProjectRevision = $ProjectRevision
-        HubRevision = $HubRevision
-        Detail = $detail
-    }
-}
-
-function Get-AgentRouteState {
-    param(
-        [Parameter(Mandatory = $true)][string]$Content,
-        [string[]]$SelectedProfiles = @()
-    )
-
-    $requiredRoutes = @('.ai-rules/RULESET.md', '.ai-rules/PROJECT_RULES.md', '.ai-rules/upstream/CORE.md')
-    $missingRequiredRoutes = @($requiredRoutes | Where-Object { -not $Content.Contains($_) })
-    $profiles = @(
-        $SelectedProfiles |
-            ForEach-Object { [string]$_ } |
-            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
-            Sort-Object -Unique
-    )
-    $generalProfileRoutePattern = [regex]::Escape('.ai-rules/upstream/profiles/') + '(?![A-Za-z0-9_.-])'
-    $hasGeneralProfileRoute = [regex]::IsMatch($Content, $generalProfileRoutePattern)
-    $missingProfileRoutes = @()
-    if ($profiles.Count -gt 0 -and -not $hasGeneralProfileRoute) {
-        $missingProfileRoutes = @(
-            foreach ($profile in $profiles) {
-                $route = ".ai-rules/upstream/profiles/$profile.md"
-                if (-not $Content.Contains($route)) {
-                    $route
-                }
-            }
-        )
-    }
-
-    return [pscustomobject]@{
-        RequiredRoutes = $requiredRoutes
-        MissingRequiredRoutes = $missingRequiredRoutes
-        ProfileRoutingRequired = $profiles.Count -gt 0
-        ProfileRoutingPresent = $profiles.Count -eq 0 -or $hasGeneralProfileRoute -or $missingProfileRoutes.Count -eq 0
-        MissingProfileRoutes = $missingProfileRoutes
-    }
-}
-
-function Get-RulesetSection {
-    param(
-        [Parameter(Mandatory = $true)][string]$Content,
-        [Parameter(Mandatory = $true)][string]$Heading
-    )
-
-    $pattern = '(?ms)^## ' + [regex]::Escape($Heading) + '[ \t]*(?:\r?\n(?<body>.*?)(?=^## |\z)|\z)'
-    $match = [regex]::Match($Content, $pattern)
-    return [pscustomobject]@{
-        Found = $match.Success
-        Content = if ($match.Success) { $match.Groups['body'].Value } else { '' }
-    }
-}
-
-function Get-RulesetSectionIds {
-    param([Parameter(Mandatory = $true)][string]$Content)
-
-    $ids = [System.Collections.Generic.List[string]]::new()
-    foreach ($line in ($Content -split '\r?\n')) {
-        $match = [regex]::Match($line, '^\s*-\s*`(?<id>[A-Za-z0-9_-]+)`(?:\s|—|-|$)')
-        if (-not $match.Success) {
-            $match = [regex]::Match($line, '^\s*-\s*(?<id>[A-Za-z0-9][A-Za-z0-9_-]*)(?:\s|—|-|$)')
-        }
-        if ($match.Success) {
-            $ids.Add($match.Groups['id'].Value)
-        }
-    }
-    return @($ids | Sort-Object -Unique)
-}
-
-function Get-RulesetConsistencyResults {
-    param(
-        [Parameter(Mandatory = $true)]$Catalog,
-        [Parameter(Mandatory = $true)]$Manifest,
-        [Parameter(Mandatory = $true)][string]$Content
-    )
-
-    $results = [System.Collections.Generic.List[object]]::new()
-    $selectedProfiles = @($Manifest.profiles | ForEach-Object { [string]$_ })
-    $selectedTopics = @($Manifest.topics | ForEach-Object { [string]$_ })
-    $profileSection = Get-RulesetSection -Content $Content -Heading 'Выбранные профили'
-    $topicSection = Get-RulesetSection -Content $Content -Heading 'Дополнительные темы'
-
-    if (-not $profileSection.Found -and $selectedProfiles.Count -gt 0) {
-        $results.Add([pscustomobject]@{ Level = 'WARN'; Message = 'RULESET.md не содержит секцию «Выбранные профили» для profiles из manifest.' })
-    }
-    elseif ($profileSection.Found) {
-        $profileIds = @(Get-RulesetSectionIds -Content $profileSection.Content)
-        foreach ($profileId in @($Catalog.profiles.PSObject.Properties.Name)) {
-            if ($profileId -in $selectedProfiles -and $profileId -notin $profileIds) {
-                $results.Add([pscustomobject]@{ Level = 'WARN'; Message = "Профиль $profileId выбран в manifest, но не объяснён в секции «Выбранные профили»." })
-            }
-            elseif ($profileId -notin $selectedProfiles -and $profileId -in $profileIds) {
-                $results.Add([pscustomobject]@{ Level = 'WARN'; Message = "Секция «Выбранные профили» содержит $profileId, но этот профиль не выбран в manifest." })
-            }
-        }
-    }
-
-    if (-not $topicSection.Found -and $selectedTopics.Count -gt 0) {
-        $results.Add([pscustomobject]@{ Level = 'WARN'; Message = 'RULESET.md не содержит секцию «Дополнительные темы» для topics из manifest.' })
-    }
-    elseif ($topicSection.Found) {
-        $topicIds = @(Get-RulesetSectionIds -Content $topicSection.Content)
-        foreach ($topicId in @($Catalog.topics.PSObject.Properties.Name)) {
-            if ($topicId -in $selectedTopics -and $topicId -notin $topicIds) {
-                $results.Add([pscustomobject]@{ Level = 'WARN'; Message = "Тема $topicId выбрана напрямую, но не объяснена в секции «Дополнительные темы»." })
-            }
-            elseif ($topicId -notin $selectedTopics -and $topicId -in $topicIds) {
-                $results.Add([pscustomobject]@{ Level = 'WARN'; Message = "Секция «Дополнительные темы» содержит $topicId, но эта тема не выбрана напрямую в manifest." })
-            }
-        }
-    }
-    return @($results)
-}
-
-function Get-LockSnapshotResults {
-    param(
-        [Parameter(Mandatory = $true)][string]$ResolvedProjectRoot,
-        [Parameter(Mandatory = $true)]$Lock
-    )
-
-    $results = [System.Collections.Generic.List[object]]::new()
-    if ($null -eq $Lock.PSObject.Properties['files']) {
-        $results.Add([pscustomobject]@{ Level = 'ERROR'; Message = 'В lock отсутствует массив files.' })
-        return @($results)
-    }
-
-    $upstreamRoot = [System.IO.Path]::GetFullPath((Join-Path $ResolvedProjectRoot '.ai-rules/upstream')).TrimEnd([char[]]@('\', '/'))
-    $upstreamPrefix = $upstreamRoot + [System.IO.Path]::DirectorySeparatorChar
-    foreach ($entry in @($Lock.files)) {
-        $target = [string]$entry.target
-        $state = [string]$entry.state
-        if ([string]::IsNullOrWhiteSpace($target) -or [System.IO.Path]::IsPathRooted($target)) {
-            $results.Add([pscustomobject]@{ Level = 'ERROR'; Message = "Некорректный относительный target в lock: $target" })
-            continue
-        }
-
-        try {
-            $targetPath = Get-AiRulesSafePath -BasePath $ResolvedProjectRoot -ChildPath $target -Label 'lock target'
-        }
-        catch {
-            $results.Add([pscustomobject]@{ Level = 'ERROR'; Message = $_.Exception.Message })
-            continue
-        }
-        if (-not $targetPath.StartsWith($upstreamPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
-            $results.Add([pscustomobject]@{ Level = 'ERROR'; Message = "Target из lock находится вне .ai-rules/upstream/: $target" })
-            continue
-        }
-        if ($state -notin @('managed', 'orphan')) {
-            $results.Add([pscustomobject]@{ Level = 'ERROR'; Message = "Неизвестное состояние lock '$state' для $target." })
-            continue
-        }
-        if ([string]$entry.sha256 -notmatch '^[0-9a-fA-F]{64}$') {
-            $results.Add([pscustomobject]@{ Level = 'ERROR'; Message = "Некорректный SHA-256 в lock для $target." })
-            continue
-        }
-
-        $exists = Test-Path -LiteralPath $targetPath -PathType Leaf
-        if ($state -eq 'managed') {
-            if (-not $exists) {
-                $results.Add([pscustomobject]@{ Level = 'ERROR'; Message = "Managed-файл отсутствует: $target" })
-                continue
-            }
-            $actualHash = Get-AiRulesSha256 -Path $targetPath
-            if ($actualHash -ne [string]$entry.sha256) {
-                $results.Add([pscustomobject]@{ Level = 'ERROR'; Message = "Managed-файл изменён вне AI Rules Hub: $target" })
-            }
-            else {
-                $results.Add([pscustomobject]@{ Level = 'OK'; Message = "Managed-файл соответствует lock: $target" })
-            }
-            continue
-        }
-
-        if (-not $exists) {
-            $results.Add([pscustomobject]@{ Level = 'WARN'; Message = "Orphan-файл отсутствует и остаётся записью lock: $target" })
-            continue
-        }
-        $actualHash = Get-AiRulesSha256 -Path $targetPath
-        if ($actualHash -eq [string]$entry.sha256) {
-            $results.Add([pscustomobject]@{ Level = 'WARN'; Message = "Orphan-файл сохранён без изменений: $target" })
-        }
-        else {
-            $results.Add([pscustomobject]@{ Level = 'WARN'; Message = "Orphan-файл изменён; его нельзя удалять автоматически: $target" })
-        }
-    }
-    return @($results)
 }
 
 function Resolve-ProjectRoot {
@@ -462,70 +136,6 @@ function Write-Values {
     foreach ($value in @($Values)) {
         Write-Host "  $value"
     }
-}
-
-function Get-PlanState {
-    param([Parameter(Mandatory = $true)][string]$Output)
-
-    $summaryMatch = [regex]::Match($Output, '(?m)^Summary:\s*(?<value>.*)$')
-    if (-not $summaryMatch.Success) {
-        return 'invalid'
-    }
-    $parts = @($summaryMatch.Groups['value'].Value.Trim() -split ',\s*' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-    foreach ($part in $parts) {
-        if ($part -notmatch '^unchanged=\d+$') {
-            return 'changes'
-        }
-    }
-    return 'unchanged'
-}
-
-function Get-PlanSummary {
-    param([Parameter(Mandatory = $true)][string]$Output)
-
-    $summary = @{}
-    $summaryMatch = [regex]::Match($Output, '(?m)^Summary:\s*(?<value>.*)$')
-    if (-not $summaryMatch.Success) {
-        return $summary
-    }
-    foreach ($part in @($summaryMatch.Groups['value'].Value.Trim() -split ',\s*')) {
-        if ($part -match '^(?<action>[a-z-]+)=(?<count>\d+)$') {
-            $summary[$Matches['action']] = [int]$Matches['count']
-        }
-    }
-    return $summary
-}
-
-function Get-EffectiveTopics {
-    param(
-        [Parameter(Mandatory = $true)]$Catalog,
-        [string[]]$SelectedProfiles,
-        [string[]]$SelectedTopics
-    )
-
-    $selected = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
-    foreach ($topic in @($SelectedTopics)) {
-        if ($null -ne $Catalog.topics.PSObject.Properties[[string]$topic]) {
-            [void]$selected.Add([string]$topic)
-        }
-    }
-    foreach ($profileName in @($SelectedProfiles)) {
-        $profileProperty = $Catalog.profiles.PSObject.Properties[[string]$profileName]
-        if ($null -eq $profileProperty) {
-            continue
-        }
-        foreach ($topic in @($profileProperty.Value.topics)) {
-            [void]$selected.Add([string]$topic)
-        }
-    }
-
-    return @(
-        foreach ($topicProperty in $Catalog.topics.PSObject.Properties) {
-            if ($selected.Contains($topicProperty.Name)) {
-                $topicProperty.Name
-            }
-        }
-    )
 }
 
 function Get-ManifestRevision {
@@ -595,252 +205,28 @@ function Write-StateResult {
 function Show-Status {
     param([Parameter(Mandatory = $true)][string]$ResolvedProjectRoot)
 
-    $projectName = Split-Path -Leaf $ResolvedProjectRoot.TrimEnd([char[]]@('\', '/'))
-    $catalog = Get-Catalog
-    $localRulesRoot = Join-Path $ResolvedProjectRoot '.ai-rules'
-    $manifestPath = Join-Path $localRulesRoot 'manifest.json'
-    $lockPath = Join-Path $localRulesRoot 'lock.json'
-    $managedRoot = Join-Path $localRulesRoot 'upstream'
-    $manifestFound = Test-Path -LiteralPath $manifestPath -PathType Leaf
-    $lockFound = Test-Path -LiteralPath $lockPath -PathType Leaf
-    $managedRootFound = Test-Path -LiteralPath $managedRoot -PathType Container
-    $hubState = Get-HubGitState
+    $projectState = Get-AiRulesProjectState -HubRoot $hubRoot -ProjectRoot $ResolvedProjectRoot
+    $assessment = Get-AiRulesStatusAssessment -ProjectState $projectState
 
-    Write-Host "Проект: $projectName"
-    Write-Host "Корень проекта: $ResolvedProjectRoot"
-    Write-Host "Manifest: $(if ($manifestFound) { 'найден' } else { 'отсутствует' })"
-    Write-Host "Lock: $(if ($lockFound) { 'найден' } else { 'отсутствует' })"
-    Write-Host "Managed-каталог: $(if ($managedRootFound) { 'найден' } else { 'отсутствует' })"
+    Write-Host "Проект: $($projectState.ProjectName)"
+    Write-Host "Корень проекта: $($projectState.ProjectRoot)"
+    Write-Host "Manifest: $(if ($projectState.Found.Manifest) { 'найден' } else { 'отсутствует' })"
+    Write-Host "Lock: $(if ($projectState.Found.Lock) { 'найден' } else { 'отсутствует' })"
+    Write-Host "Managed-каталог: $(if ($projectState.Found.ManagedRoot) { 'найден' } else { 'отсутствует' })"
     Write-Host ''
-    Write-Host "Revision хаба: $($hubState.Revision)"
-    Write-Host "Checkout хаба изменён: $($hubState.Dirty.ToString().ToLowerInvariant())"
-
-    if (-not $manifestFound) {
-        Write-Host ''
-        Write-Host 'Revision manifest: не закреплена'
-        Write-Host 'Revision lock: отсутствует'
-        Write-Values -Label 'Профили (Profiles)' -Values @()
-        Write-Values -Label 'Прямые темы (Direct topics)' -Values @()
-        Write-Values -Label 'Итоговые темы (Effective topics)' -Values @()
-        Write-Host ''
-        Write-Host 'Диагностика: сначала инициализируйте подключение проекта.'
-        Write-StateResult -State 'not-initialized' -ResolvedProjectRoot $ResolvedProjectRoot
-        return
-    }
-
-    try {
-        $manifest = Get-JsonFile -Path $manifestPath
-    }
-    catch {
-        Write-Host ''
-        Write-Host 'Revision manifest: не определена'
-        Write-Host 'Revision lock: не определена'
-        Write-Values -Label 'Профили (Profiles)' -Values @()
-        Write-Values -Label 'Прямые темы (Direct topics)' -Values @()
-        Write-Values -Label 'Итоговые темы (Effective topics)' -Values @()
-        Write-Host ''
-        Write-Host "Диагностика: $($_.Exception.Message)"
-        Write-StateResult -State 'inconsistent' -ResolvedProjectRoot $ResolvedProjectRoot
-        return
-    }
-    $structuralDiagnostics = [System.Collections.Generic.List[string]]::new()
-    $statusWarnings = [System.Collections.Generic.List[string]]::new()
-    if ($manifest.schemaVersion -ne '0.2') {
-        $structuralDiagnostics.Add("неподдерживаемая manifest schemaVersion: $($manifest.schemaVersion).")
-    }
-    foreach ($requiredProperty in @('source', 'topics', 'profiles')) {
-        if ($null -eq $manifest.PSObject.Properties[$requiredProperty]) {
-            $structuralDiagnostics.Add("в manifest отсутствует поле: $requiredProperty.")
-        }
-    }
-    if ($null -eq $manifest.source) {
-        $structuralDiagnostics.Add('в manifest отсутствует source.')
-    }
-    else {
-        if ($null -eq $manifest.source.PSObject.Properties['repository'] -or [string]$manifest.source.repository -ne 'ai-rules-hub') {
-            $structuralDiagnostics.Add('manifest source.repository отсутствует или не поддерживается.')
-        }
-        if ($null -eq $manifest.source.PSObject.Properties['revision']) {
-            $structuralDiagnostics.Add('в manifest отсутствует поле source.revision.')
-        }
-    }
-    $manifestRevision = $null
-    if ($null -ne $manifest.source -and $null -ne $manifest.source.revision) {
-        $manifestRevision = [string]$manifest.source.revision
-    }
-    $profiles = @($manifest.profiles | ForEach-Object { [string]$_ })
-    $directTopics = @($manifest.topics | ForEach-Object { [string]$_ })
-    $effectiveTopics = Get-EffectiveTopics -Catalog $catalog -SelectedProfiles $profiles -SelectedTopics $directTopics
-    try {
-        Assert-Selections -Catalog $catalog -SelectedProfiles $profiles -SelectedTopics $directTopics
-    }
-    catch {
-        $structuralDiagnostics.Add($_.Exception.Message)
-    }
-    $lock = $null
-    $lockRevision = $null
-    $lockContractValid = $false
-    if ($lockFound) {
-        try {
-            $lock = Get-JsonFile -Path $lockPath
-            if ($lock.schemaVersion -ne '0.2') {
-                $structuralDiagnostics.Add("неподдерживаемая lock schemaVersion: $($lock.schemaVersion).")
-            }
-            if ([string]$lock.manifest -ne '.ai-rules/manifest.json') {
-                $structuralDiagnostics.Add('путь manifest в lock противоречит контракту.')
-            }
-            if ([string]$lock.managedRoot -ne '.ai-rules/upstream') {
-                $structuralDiagnostics.Add('managed root в lock противоречит контракту.')
-            }
-            if (
-                $lock.schemaVersion -eq '0.2' -and
-                [string]$lock.manifest -eq '.ai-rules/manifest.json' -and
-                [string]$lock.managedRoot -eq '.ai-rules/upstream'
-            ) {
-                $lockContractValid = $true
-            }
-            if ($null -ne $lock.source -and $null -ne $lock.source.revision) {
-                $lockRevision = [string]$lock.source.revision
-            }
-            $lockTopics = @($lock.topics | ForEach-Object { [string]$_ } | Sort-Object -Unique)
-            $expectedTopics = @($effectiveTopics | Sort-Object -Unique)
-            if (($expectedTopics -join "`n") -ne ($lockTopics -join "`n")) {
-                $structuralDiagnostics.Add('итоговые темы manifest и lock не совпадают.')
-            }
-            $lockProfiles = @($lock.profiles | ForEach-Object { [string]$_ } | Sort-Object -Unique)
-            $expectedProfiles = @($profiles | Sort-Object -Unique)
-            if (($expectedProfiles -join "`n") -ne ($lockProfiles -join "`n")) {
-                $structuralDiagnostics.Add('профили manifest и lock не совпадают.')
-            }
-            if ($lockContractValid) {
-                foreach ($snapshotResult in @(Get-LockSnapshotResults -ResolvedProjectRoot $ResolvedProjectRoot -Lock $lock)) {
-                    if ($snapshotResult.Level -eq 'ERROR') {
-                        $structuralDiagnostics.Add($snapshotResult.Message)
-                    }
-                    elseif ($snapshotResult.Level -eq 'WARN') {
-                        $statusWarnings.Add($snapshotResult.Message)
-                    }
-                }
-            }
-        }
-        catch {
-            $structuralDiagnostics.Add($_.Exception.Message)
-        }
-    }
-
+    Write-Host "Revision хаба: $($projectState.HubState.Revision)"
+    Write-Host "Checkout хаба изменён: $($projectState.HubState.Dirty.ToString().ToLowerInvariant())"
     Write-Host ''
-    Write-Host "Revision manifest: $(if ([string]::IsNullOrWhiteSpace($manifestRevision)) { 'не закреплена' } else { $manifestRevision })"
-    Write-Host "Revision lock: $(if ([string]::IsNullOrWhiteSpace($lockRevision)) { 'отсутствует' } else { $lockRevision })"
-    Write-Values -Label 'Профили (Profiles)' -Values $profiles
-    Write-Values -Label 'Прямые темы (Direct topics)' -Values $directTopics
-    Write-Values -Label 'Итоговые темы (Effective topics)' -Values $effectiveTopics
-
-    $diagnostics = [System.Collections.Generic.List[string]]::new()
-    foreach ($structuralDiagnostic in $structuralDiagnostics) {
-        $diagnostics.Add($structuralDiagnostic)
-    }
-    $state = $null
-    if ($structuralDiagnostics.Count -gt 0) {
-        $state = 'inconsistent'
-    }
-    elseif ([string]::IsNullOrWhiteSpace($manifestRevision)) {
-        $state = 'unpinned'
-        $diagnostics.Add('manifest пока не закреплён за revision.')
-    }
-    else {
-        if ($manifestRevision -notmatch '^[0-9a-fA-F]{40}$') {
-            $diagnostics.Add('revision manifest не является полным commit SHA.')
-        }
-        if (-not $lockFound) {
-            $diagnostics.Add('для закреплённого manifest отсутствует lock.json.')
-        }
-        if (-not $managedRootFound) {
-            $diagnostics.Add('для закреплённого manifest отсутствует managed-каталог upstream.')
-        }
-        if ($lockFound -and [string]::IsNullOrWhiteSpace($lockRevision)) {
-            $diagnostics.Add('в lock отсутствует revision.')
-        }
-        if (-not [string]::IsNullOrWhiteSpace($lockRevision) -and $lockRevision -notmatch '^[0-9a-fA-F]{40}$') {
-            $diagnostics.Add('revision lock не является полным commit SHA.')
-        }
-        if (-not [string]::IsNullOrWhiteSpace($lockRevision) -and $manifestRevision -ne $lockRevision) {
-            $diagnostics.Add('revision manifest и lock не совпадают.')
-        }
-        $agentsPath = Join-Path $ResolvedProjectRoot 'AGENTS.md'
-        $rulesetPath = Join-Path $ResolvedProjectRoot '.ai-rules/RULESET.md'
-        $projectRulesPath = Join-Path $ResolvedProjectRoot '.ai-rules/PROJECT_RULES.md'
-        if (-not (Test-Path -LiteralPath $agentsPath -PathType Leaf)) {
-            $diagnostics.Add('для закреплённого проекта отсутствует корневой AGENTS.md.')
-        }
-        else {
-            $agentsContent = Get-Content -LiteralPath $agentsPath -Raw -Encoding UTF8
-            $routeState = Get-AgentRouteState -Content $agentsContent -SelectedProfiles $profiles
-            if ($routeState.MissingRequiredRoutes.Count -gt 0) {
-                $diagnostics.Add("закреплённый проект не подключает обязательные маршруты AI Rules Hub: $($routeState.MissingRequiredRoutes -join ', ').")
-            }
-            if (-not $routeState.ProfileRoutingPresent) {
-                $diagnostics.Add("закреплённый проект не подключает выбранные профили AI Rules Hub: $($profiles -join ', ').")
-            }
-        }
-        if (-not (Test-Path -LiteralPath $rulesetPath -PathType Leaf)) {
-            $diagnostics.Add('для закреплённого проекта отсутствует .ai-rules/RULESET.md.')
-        }
-        if (-not (Test-Path -LiteralPath $projectRulesPath -PathType Leaf)) {
-            $diagnostics.Add('для закреплённого проекта отсутствует .ai-rules/PROJECT_RULES.md.')
-        }
-
-        if ($diagnostics.Count -gt 0) {
-            $state = 'inconsistent'
-        }
-        else {
-            $revisionRelation = Get-RevisionRelation -ProjectRevision $manifestRevision -HubRevision $hubState.Revision
-            switch ($revisionRelation.Relation) {
-                'ahead' {
-                    $state = 'update-available'
-                    $diagnostics.Add('текущий checkout хаба содержит более новую revision.')
-                }
-                'behind' {
-                    $state = 'checkout-older'
-                    $diagnostics.Add('checkout хаба старее revision проекта; update -Apply предложит откат.')
-                }
-                'diverged' {
-                    $state = 'checkout-diverged'
-                    $diagnostics.Add('revision проекта и checkout хаба находятся в расходящихся историях.')
-                }
-                'unavailable' {
-                    $state = 'checkout-mismatch'
-                    $diagnostics.Add("отношение revisions определить не удалось. $($revisionRelation.Detail)")
-                }
-                'same' {
-                    $planResult = Invoke-ChildScript -ScriptPath $syncScriptPath -Arguments @(
-                        '-ProjectRoot', $ResolvedProjectRoot,
-                        '-Mode', 'Plan'
-                    ) -Capture
-                    if ($planResult.ExitCode -ne 0) {
-                        $state = 'inconsistent'
-                        $diagnostics.Add('не удалось построить sync Plan.')
-                        $diagnostics.Add($planResult.Output.Trim())
-                    }
-                    elseif ((Get-PlanState -Output $planResult.Output) -eq 'unchanged') {
-                        $state = 'synchronized'
-                    }
-                    else {
-                        $state = 'inconsistent'
-                        $diagnostics.Add('sync Plan содержит незавершённые изменения или конфликтные состояния.')
-                    }
-                }
-            }
-        }
-    }
-
+    Write-Host "Revision manifest: $(if ([string]::IsNullOrWhiteSpace($projectState.ManifestRevision)) { 'не закреплена' } else { $projectState.ManifestRevision })"
+    Write-Host "Revision lock: $(if ([string]::IsNullOrWhiteSpace($projectState.LockRevision)) { 'отсутствует' } else { $projectState.LockRevision })"
+    Write-Values -Label 'Профили (Profiles)' -Values $projectState.Profiles
+    Write-Values -Label 'Прямые темы (Direct topics)' -Values $projectState.DirectTopics
+    Write-Values -Label 'Итоговые темы (Effective topics)' -Values $projectState.EffectiveTopics
     Write-Host ''
-    foreach ($statusWarning in $statusWarnings) {
-        Write-Host "Предупреждение: $statusWarning"
-    }
-    foreach ($diagnostic in $diagnostics) {
-        Write-Host "Диагностика: $diagnostic"
-    }
-    Write-StateResult -State $state -ResolvedProjectRoot $ResolvedProjectRoot
+    foreach ($warning in @($assessment.Warnings)) { Write-Host "Предупреждение: $warning" }
+    foreach ($diagnostic in @($assessment.Diagnostics)) { Write-Host "Диагностика: $diagnostic" }
+    Write-StateResult -State $assessment.State -ResolvedProjectRoot $ResolvedProjectRoot
+    return
 }
 
 function Add-DoctorResult {
@@ -874,17 +260,17 @@ function Get-TemplatePlaceholders {
 function Invoke-ProjectDoctor {
     param([Parameter(Mandatory = $true)][string]$ResolvedProjectRoot)
 
+    $projectState = Get-AiRulesProjectState -HubRoot $hubRoot -ProjectRoot $ResolvedProjectRoot
     $errors = [System.Collections.Generic.List[string]]::new()
     $warnings = [System.Collections.Generic.List[string]]::new()
-    $projectName = Split-Path -Leaf $ResolvedProjectRoot.TrimEnd([char[]]@('\', '/'))
-    $localRulesRoot = Join-Path $ResolvedProjectRoot '.ai-rules'
-    $manifestPath = Join-Path $localRulesRoot 'manifest.json'
-    $lockPath = Join-Path $localRulesRoot 'lock.json'
-    $upstreamRoot = Join-Path $localRulesRoot 'upstream'
-    $agentsPath = Join-Path $ResolvedProjectRoot 'AGENTS.md'
-    $rulesetPath = Join-Path $localRulesRoot 'RULESET.md'
-    $projectRulesPath = Join-Path $localRulesRoot 'PROJECT_RULES.md'
-    $catalog = Get-Catalog
+    $projectName = $projectState.ProjectName
+    $manifestPath = $projectState.Paths.Manifest
+    $lockPath = $projectState.Paths.Lock
+    $upstreamRoot = $projectState.Paths.ManagedRoot
+    $agentsPath = $projectState.Paths.Agents
+    $rulesetPath = $projectState.Paths.Ruleset
+    $projectRulesPath = $projectState.Paths.ProjectRules
+    $catalog = $projectState.Catalog
     $manifest = $null
     $manifestValid = $false
     $selectionsValid = $false
@@ -900,7 +286,10 @@ function Invoke-ProjectDoctor {
     }
     else {
         try {
-            $manifest = Get-JsonFile -Path $manifestPath
+            if (-not [string]::IsNullOrWhiteSpace($projectState.ManifestError)) {
+                throw $projectState.ManifestError
+            }
+            $manifest = $projectState.Manifest
             if ($manifest.schemaVersion -ne '0.2') {
                 Add-DoctorResult -Level 'ERROR' -Message "Manifest использует неподдерживаемую schemaVersion: $($manifest.schemaVersion)." -Errors $errors -Warnings $warnings
             }
@@ -918,7 +307,7 @@ function Invoke-ProjectDoctor {
                 $manifestValid = $true
                 Add-DoctorResult -Level 'OK' -Message 'Manifest найден и валиден.' -Errors $errors -Warnings $warnings
                 try {
-                    Assert-Selections -Catalog $catalog -SelectedProfiles @($manifest.profiles) -SelectedTopics @($manifest.topics)
+                    Assert-AiRulesSelections -Catalog $catalog -SelectedProfiles @($manifest.profiles) -SelectedTopics @($manifest.topics)
                     $selectionsValid = $true
                     Add-DoctorResult -Level 'OK' -Message 'Все profiles и topics известны catalog.' -Errors $errors -Warnings $warnings
                 }
@@ -963,7 +352,10 @@ function Invoke-ProjectDoctor {
     $lockValid = $false
     if (Test-Path -LiteralPath $lockPath -PathType Leaf) {
         try {
-            $lock = Get-JsonFile -Path $lockPath
+            if (-not [string]::IsNullOrWhiteSpace($projectState.LockError)) {
+                throw $projectState.LockError
+            }
+            $lock = $projectState.Lock
             if ($lock.schemaVersion -ne '0.2') {
                 Add-DoctorResult -Level 'ERROR' -Message "Lock использует неподдерживаемую schemaVersion: $($lock.schemaVersion)." -Errors $errors -Warnings $warnings
             }
@@ -1003,7 +395,7 @@ function Invoke-ProjectDoctor {
         else {
             Add-DoctorResult -Level 'ERROR' -Message 'Revision manifest и lock не совпадают.' -Errors $errors -Warnings $warnings
         }
-        $expectedTopics = @(Get-EffectiveTopics -Catalog $catalog -SelectedProfiles @($manifest.profiles) -SelectedTopics @($manifest.topics) | Sort-Object -Unique)
+        $expectedTopics = @(Get-AiRulesEffectiveTopics -Catalog $catalog -SelectedProfiles @($manifest.profiles) -SelectedTopics @($manifest.topics) | Sort-Object -Unique)
         $lockTopics = @($lock.topics | ForEach-Object { [string]$_ } | Sort-Object -Unique)
         if (($expectedTopics -join "`n") -ne ($lockTopics -join "`n")) {
             Add-DoctorResult -Level 'ERROR' -Message 'Итоговые темы manifest и lock не совпадают.' -Errors $errors -Warnings $warnings
@@ -1015,7 +407,7 @@ function Invoke-ProjectDoctor {
         }
     }
     if ($lockValid) {
-        foreach ($snapshotResult in @(Get-LockSnapshotResults -ResolvedProjectRoot $ResolvedProjectRoot -Lock $lock)) {
+        foreach ($snapshotResult in @(Get-AiRulesLockSnapshotResults -ProjectRoot $ResolvedProjectRoot -Lock $lock)) {
             Add-DoctorResult -Level $snapshotResult.Level -Message $snapshotResult.Message -Errors $errors -Warnings $warnings
         }
     }
@@ -1023,7 +415,7 @@ function Invoke-ProjectDoctor {
     if (Test-Path -LiteralPath $agentsPath -PathType Leaf) {
         $agentsContent = Get-Content -LiteralPath $agentsPath -Raw -Encoding UTF8
         $selectedProfiles = if ($manifestValid) { @($manifest.profiles | ForEach-Object { [string]$_ }) } else { @() }
-        $routeState = Get-AgentRouteState -Content $agentsContent -SelectedProfiles $selectedProfiles
+        $routeState = Get-AiRulesAgentRouteState -Content $agentsContent -SelectedProfiles $selectedProfiles
         if ($routeState.MissingRequiredRoutes.Count -gt 0) {
             if ($pinned) {
                 Add-DoctorResult -Level 'ERROR' -Message "Закреплённый проект не подключает обязательные маршруты AI Rules Hub. Объедините существующий AGENTS.md с templates/AGENTS.md. Отсутствуют: $($routeState.MissingRequiredRoutes -join ', ')." -Errors $errors -Warnings $warnings
@@ -1085,7 +477,7 @@ function Invoke-ProjectDoctor {
 
     if ($manifestValid -and $selectionsValid -and (Test-Path -LiteralPath $rulesetPath -PathType Leaf)) {
         $rulesetContent = Get-Content -LiteralPath $rulesetPath -Raw -Encoding UTF8
-        $rulesetResults = @(Get-RulesetConsistencyResults -Catalog $catalog -Manifest $manifest -Content $rulesetContent)
+        $rulesetResults = @(Get-AiRulesRulesetConsistencyResults -Catalog $catalog -Manifest $manifest -Content $rulesetContent)
         if ($rulesetResults.Count -eq 0) {
             Add-DoctorResult -Level 'OK' -Message 'Manifest и RULESET.md согласованы по profiles и прямым topics.' -Errors $errors -Warnings $warnings
         }
@@ -1100,8 +492,7 @@ function Invoke-ProjectDoctor {
         $canRunPlan = $true
         if ($pinned) {
             try {
-                $hubState = Get-HubGitState
-                $revisionRelation = Get-RevisionRelation -ProjectRevision $manifestRevision -HubRevision $hubState.Revision
+                $revisionRelation = $projectState.RevisionRelation
                 switch ($revisionRelation.Relation) {
                     'ahead' {
                         $canRunPlan = $false
@@ -1127,37 +518,32 @@ function Invoke-ProjectDoctor {
             }
         }
         if ($canRunPlan) {
-            $planResult = Invoke-ChildScript -ScriptPath $syncScriptPath -Arguments @('-ProjectRoot', $ResolvedProjectRoot, '-Mode', 'Plan') -Capture
-            if ($planResult.ExitCode -ne 0) {
-                Add-DoctorResult -Level 'ERROR' -Message "Не удалось построить managed Plan: $($planResult.Output.Trim())." -Errors $errors -Warnings $warnings
+            $syncPlan = $projectState.SyncPlan
+            if (-not [string]::IsNullOrWhiteSpace($projectState.SyncPlanError)) {
+                Add-DoctorResult -Level 'ERROR' -Message "Не удалось построить managed Plan: $($projectState.SyncPlanError)." -Errors $errors -Warnings $warnings
             }
-            else {
-                $summary = Get-PlanSummary -Output $planResult.Output
-                if ($summary.Count -eq 0) {
-                    Add-DoctorResult -Level 'ERROR' -Message 'Managed Plan не содержит распознаваемый Summary.' -Errors $errors -Warnings $warnings
+            if ($null -ne $syncPlan) {
+                $summary = $syncPlan.Summary
+                if ($summary.Contains('conflict')) {
+                    Add-DoctorResult -Level 'ERROR' -Message "Managed Plan обнаружил conflict: $($summary['conflict'])." -Errors $errors -Warnings $warnings
                 }
-                else {
-                    if ($summary.ContainsKey('conflict')) {
-                        Add-DoctorResult -Level 'ERROR' -Message "Managed Plan обнаружил conflict: $($summary['conflict'])." -Errors $errors -Warnings $warnings
-                    }
-                    foreach ($pendingAction in @('add', 'update')) {
-                        if ($summary.ContainsKey($pendingAction)) {
-                            if ($pinned) {
-                                Add-DoctorResult -Level 'ERROR' -Message "Для текущей закреплённой revision обнаружено pending-состояние ${pendingAction}: $($summary[$pendingAction])." -Errors $errors -Warnings $warnings
-                            }
-                            else {
-                                Add-DoctorResult -Level 'OK' -Message "Предварительный Plan: ${pendingAction}=$($summary[$pendingAction])." -Errors $errors -Warnings $warnings
-                            }
+                foreach ($pendingAction in @('add', 'update')) {
+                    if ($summary.Contains($pendingAction)) {
+                        if ($pinned) {
+                            Add-DoctorResult -Level 'ERROR' -Message "Для текущей закреплённой revision обнаружено pending-состояние ${pendingAction}: $($summary[$pendingAction])." -Errors $errors -Warnings $warnings
+                        }
+                        else {
+                            Add-DoctorResult -Level 'OK' -Message "Предварительный Plan: ${pendingAction}=$($summary[$pendingAction])." -Errors $errors -Warnings $warnings
                         }
                     }
-                    foreach ($orphanAction in @('orphan', 'orphan-modified', 'orphan-missing')) {
-                        if ($summary.ContainsKey($orphanAction)) {
-                            Add-DoctorResult -Level 'WARN' -Message "Managed Plan обнаружил ${orphanAction}: $($summary[$orphanAction])." -Errors $errors -Warnings $warnings
-                        }
+                }
+                foreach ($orphanAction in @('orphan', 'orphan-modified', 'orphan-missing')) {
+                    if ($summary.Contains($orphanAction)) {
+                        Add-DoctorResult -Level 'WARN' -Message "Managed Plan обнаружил ${orphanAction}: $($summary[$orphanAction])." -Errors $errors -Warnings $warnings
                     }
-                    if ($summary.ContainsKey('unchanged') -and $summary.Count -eq 1) {
-                        Add-DoctorResult -Level 'OK' -Message "Managed-файлы синхронизированы: unchanged=$($summary['unchanged'])." -Errors $errors -Warnings $warnings
-                    }
+                }
+                if ($summary.Contains('unchanged') -and $summary.Count -eq 1) {
+                    Add-DoctorResult -Level 'OK' -Message "Managed-файлы синхронизированы: unchanged=$($summary['unchanged'])." -Errors $errors -Warnings $warnings
                 }
             }
         }
@@ -1231,7 +617,7 @@ function Invoke-Update {
     if ($null -ne $manifest.source.revision) {
         $currentRevision = [string]$manifest.source.revision
     }
-    $hubState = Get-HubGitState
+    $hubState = Get-AiRulesHubGitState -HubRoot $hubRoot
 
     Write-Host "Текущая revision проекта: $(if ([string]::IsNullOrWhiteSpace($currentRevision)) { 'не закреплена' } else { $currentRevision })"
     Write-Host "Базовая revision checkout: $($hubState.Revision)"
@@ -1340,7 +726,7 @@ try {
             }
         }
         'list' {
-            $catalog = Get-Catalog
+            $catalog = Get-AiRulesCatalog -HubRoot $hubRoot
             if ([string]::IsNullOrWhiteSpace($ListTarget)) {
                 throw "Для команды 'list' укажите 'profiles' или 'topics'."
             }
@@ -1384,8 +770,8 @@ try {
         'connect' {
             $resolvedProjectRoot = Resolve-ProjectRoot -Path $ProjectRoot
             $manifestPath = Join-Path $resolvedProjectRoot '.ai-rules/manifest.json'
-            $selectedProfiles = ConvertTo-NameList -Values $Profiles
-            $selectedTopics = ConvertTo-NameList -Values $Topics
+            $selectedProfiles = ConvertTo-AiRulesNameList -Values $Profiles
+            $selectedTopics = ConvertTo-AiRulesNameList -Values $Topics
 
             if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
                 if ($Apply) {
@@ -1399,8 +785,8 @@ try {
                     throw 'Для нового проекта укажите хотя бы один -Profiles или -Topics. AI-агент может подобрать набор через prompt connect.'
                 }
 
-                $catalog = Get-Catalog
-                Assert-Selections -Catalog $catalog -SelectedProfiles $selectedProfiles -SelectedTopics $selectedTopics
+                $catalog = Get-AiRulesCatalog -HubRoot $hubRoot
+                Assert-AiRulesSelections -Catalog $catalog -SelectedProfiles $selectedProfiles -SelectedTopics $selectedTopics
                 $initArguments = @('-ProjectRoot', $resolvedProjectRoot, '-SeedProjectFiles')
                 if ($selectedProfiles.Count -gt 0) {
                     $initArguments += @('-Profiles', ($selectedProfiles -join ','))
@@ -1439,10 +825,10 @@ try {
         }
         'init' {
             $resolvedProjectRoot = Resolve-ProjectRoot -Path $ProjectRoot
-            $catalog = Get-Catalog
-            $selectedProfiles = ConvertTo-NameList -Values $Profiles
-            $selectedTopics = ConvertTo-NameList -Values $Topics
-            Assert-Selections -Catalog $catalog -SelectedProfiles $selectedProfiles -SelectedTopics $selectedTopics
+            $catalog = Get-AiRulesCatalog -HubRoot $hubRoot
+            $selectedProfiles = ConvertTo-AiRulesNameList -Values $Profiles
+            $selectedTopics = ConvertTo-AiRulesNameList -Values $Topics
+            Assert-AiRulesSelections -Catalog $catalog -SelectedProfiles $selectedProfiles -SelectedTopics $selectedTopics
             $arguments = @('-ProjectRoot', $resolvedProjectRoot)
             if ($selectedProfiles.Count -gt 0) {
                 $arguments += '-Profiles'
@@ -1477,11 +863,12 @@ try {
         'plan' {
             $resolvedProjectRoot = Resolve-ProjectRoot -Path $ProjectRoot
             $manifestRevision = Get-ManifestRevision -ResolvedProjectRoot $resolvedProjectRoot
-            $result = Invoke-ChildScript -ScriptPath $syncScriptPath -Arguments @('-ProjectRoot', $resolvedProjectRoot, '-Mode', 'Plan') -Capture
-            $planOutput = $result.Output
+            $planArguments = @('-ProjectRoot', $resolvedProjectRoot, '-Mode', 'Plan')
             if ([string]::IsNullOrWhiteSpace($manifestRevision)) {
-                $planOutput = [regex]::Replace($planOutput, '(?m)^Следующий шаг: проверьте Plan и выбранную revision, затем повторите команду с -Mode Apply\.\r?\n?', '')
+                $planArguments += '-SuppressNextStep'
             }
+            $result = Invoke-ChildScript -ScriptPath $syncScriptPath -Arguments $planArguments -Capture
+            $planOutput = $result.Output
             Write-Host $planOutput.TrimEnd()
             if ($result.ExitCode -ne 0) {
                 throw 'Не удалось построить sync Plan.'

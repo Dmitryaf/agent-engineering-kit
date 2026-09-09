@@ -39,9 +39,22 @@ $requiredPaths = @(
     'scripts/sync-common.ps1',
     'scripts/init-project-sync.ps1',
     'scripts/show-prompt.ps1',
+    'src/Catalog.psm1',
+    'src/Contracts.psm1',
+    'src/PathsAndHashing.psm1',
+    'src/GitState.psm1',
+    'src/SyncPlan.psm1',
+    'src/ProjectState.psm1',
+    'src/Diagnostics.psm1',
     '.githooks/commit-msg',
     '.github/workflows/validate.yml',
-    'tests/test-tooling.ps1'
+    'tests/test-tooling.ps1',
+    'tests/run.ps1',
+    'tests/contracts/test-contracts.ps1',
+    'tests/sync/test-sync-plan.ps1',
+    'tests/cli/test-integration.ps1',
+    'tests/diagnostics/test-project-state.ps1',
+    'tests/policy-structure/test-module-boundaries.ps1'
 )
 
 foreach ($requiredPath in $requiredPaths) {
@@ -198,6 +211,7 @@ foreach ($file in $markdownFiles) {
     }
 }
 
+$catalog = $null
 $catalogPath = Join-Path $repoRoot 'sync/catalog.json'
 if (Test-Path -LiteralPath $catalogPath -PathType Leaf) {
     try {
@@ -317,15 +331,41 @@ $jsonFiles = @(
     'sync/project-manifest.schema.json',
     'sync/project-manifest.example.json'
 )
+$manifestSchema = $null
 foreach ($jsonFile in $jsonFiles) {
     $jsonPath = Join-Path $repoRoot $jsonFile
     if (Test-Path -LiteralPath $jsonPath -PathType Leaf) {
         try {
-            Get-Content -LiteralPath $jsonPath -Raw -Encoding UTF8 | ConvertFrom-Json | Out-Null
+            $jsonObject = Get-Content -LiteralPath $jsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($jsonFile -eq 'sync/project-manifest.schema.json') {
+                $manifestSchema = $jsonObject
+            }
         }
         catch {
             $errors.Add("Invalid JSON in ${jsonFile}: $($_.Exception.Message)")
         }
+    }
+}
+
+if ($null -ne $catalog -and $null -ne $manifestSchema) {
+    $catalogTopicIds = @($catalog.topics.PSObject.Properties.Name | Sort-Object -Unique)
+    $schemaTopicIdsRaw = @($manifestSchema.properties.topics.items.enum | ForEach-Object { [string]$_ })
+    $schemaTopicIds = @($schemaTopicIdsRaw | Sort-Object -Unique)
+    if (
+        $schemaTopicIdsRaw.Count -ne $schemaTopicIds.Count -or
+        ($catalogTopicIds -join "`n") -ne ($schemaTopicIds -join "`n")
+    ) {
+        $errors.Add('Manifest schema topic enum must exactly match catalog topics.')
+    }
+
+    $catalogProfileIds = @($catalog.profiles.PSObject.Properties.Name | Sort-Object -Unique)
+    $schemaProfileIdsRaw = @($manifestSchema.properties.profiles.items.enum | ForEach-Object { [string]$_ })
+    $schemaProfileIds = @($schemaProfileIdsRaw | Sort-Object -Unique)
+    if (
+        $schemaProfileIdsRaw.Count -ne $schemaProfileIds.Count -or
+        ($catalogProfileIds -join "`n") -ne ($schemaProfileIds -join "`n")
+    ) {
+        $errors.Add('Manifest schema profile enum must exactly match catalog profiles.')
     }
 }
 
