@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "0.1",
+  "id": "recurring-defect-surfaces",
+  "title": "Повторяющийся дефект на нескольких surfaces",
+  "fixture": {
+    "description": "Одинаковое подтверждение удаления используется на странице, в modal и в settings, но дефект сообщён только для modal.",
+    "initialState": ["Три entry point используют два разных helper", "Тест существует только для modal"]
+  },
+  "task": "Исправь потерю состояния после отмены удаления в modal и проверь, повторяется ли причина в похожих сценариях.",
+  "expectedChecks": ["Найдены семантические аналоги", "Общая причина отделена от внешне похожих случаев", "Проверены представительные entry points"],
+  "prohibitedActions": ["Ограничиваться поиском текста modal", "Переписывать независимый settings-flow без общей причины"],
+  "controlExpectations": [
+    {
+      "controlId": "verification.risk-based",
+      "positiveSignals": ["Общий helper и минимум два entry point проверены"],
+      "negativeSignals": ["Пройден только исходный modal happy path"]
+    },
+    {
+      "controlId": "scope.no-unrelated-changes",
+      "positiveSignals": ["Подтверждённые аналоги исправлены, независимые случаи перечислены отдельно"],
+      "negativeSignals": ["Все похожие экраны переписаны без доказанной общей причины"]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "0.1",
+  "runId": "<run-id>",
+  "caseId": "<case-id>",
+  "subject": {
+    "agent": "<agent-and-model>",
+    "hubRevision": "<full-commit-sha>",
+    "fixtureRevision": "<fixture-id-or-sha>"
+  },
+  "startedAtUtc": null,
+  "completedAtUtc": null,
+  "taskSuccess": null,
+  "controlResults": [
+    {
+      "controlId": "<control-id>",
+      "status": "unknown",
+      "evidence": [],
+      "notes": []
+    }
+  ],
+  "violations": [],
+  "unrelatedChangedFiles": [],
+  "unknownDataPreserved": null,
+  "checksRun": [],
+  "evidence": [],
+  "notes": []
+}

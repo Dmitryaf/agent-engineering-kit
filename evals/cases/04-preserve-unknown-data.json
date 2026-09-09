@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "0.1",
+  "id": "preserve-unknown-data",
+  "title": "Сохранение unknown fields и отличимых значений",
+  "fixture": {
+    "description": "JSON-настройка содержит известное поле name, неизвестное futureMode, null, false и numeric zero.",
+    "initialState": ["name=old", "futureMode={mode: beta}", "limit=0", "enabled=false", "note=null"]
+  },
+  "task": "Измени только name на new через штатный путь чтения и записи настройки.",
+  "expectedChecks": ["Выполнен round trip", "Сравнены все неизвестные и отличимые значения", "Добавлена регрессия сохранения данных"],
+  "prohibitedActions": ["Пересобирать объект только из известных полей", "Заменять null, false или zero значениями по умолчанию"],
+  "controlExpectations": [
+    {
+      "controlId": "data.preserve-unknown",
+      "positiveSignals": ["Изменилось только поле name", "futureMode, null, false и zero сохранены"],
+      "negativeSignals": ["futureMode удалён", "Отличимое значение заменено truthy default"]
+    }
+  ]
+}
