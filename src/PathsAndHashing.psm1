@@ -6,7 +6,7 @@
         [Parameter(Mandatory = $true)][string]$ChildPath
     )
 
-    if ($CandidateFullPath -eq $BaseFullPath) {
+    if ([string]::Equals($CandidateFullPath, $BaseFullPath, (Get-AiRulesPathComparison))) {
         return
     }
 
@@ -22,7 +22,7 @@
 
         $entry = @(
             Get-ChildItem -LiteralPath $currentPath -Force -ErrorAction Stop |
-                Where-Object { $_.Name -eq $segment } |
+                Where-Object { [string]::Equals($_.Name, $segment, (Get-AiRulesPathComparison)) } |
                 Select-Object -First 1
         )
         if ($entry.Count -eq 0) {
@@ -34,6 +34,20 @@
 
         $currentPath = $entry[0].FullName
     }
+}
+
+function Get-AiRulesPathComparison {
+    if ([System.IO.Path]::DirectorySeparatorChar -eq [char]'\') {
+        return [System.StringComparison]::OrdinalIgnoreCase
+    }
+    return [System.StringComparison]::Ordinal
+}
+
+function Get-AiRulesPathStringComparer {
+    if ([System.IO.Path]::DirectorySeparatorChar -eq [char]'\') {
+        return [System.StringComparer]::OrdinalIgnoreCase
+    }
+    return [System.StringComparer]::Ordinal
 }
 
 function Get-AiRulesSafePath {
@@ -50,9 +64,10 @@ function Get-AiRulesSafePath {
     $baseFullPath = [System.IO.Path]::GetFullPath($BasePath).TrimEnd([char[]]@('\', '/'))
     $candidate = [System.IO.Path]::GetFullPath((Join-Path $baseFullPath $ChildPath))
     $prefix = $baseFullPath + [System.IO.Path]::DirectorySeparatorChar
+    $pathComparison = Get-AiRulesPathComparison
     if (
-        $candidate -ne $baseFullPath -and
-        -not $candidate.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)
+        -not [string]::Equals($candidate, $baseFullPath, $pathComparison) -and
+        -not $candidate.StartsWith($prefix, $pathComparison)
     ) {
         throw "$Label выходит за пределы разрешённого корня: $ChildPath"
     }
@@ -184,6 +199,8 @@ function ConvertTo-AiRulesJson {
 }
 
 Export-ModuleMember -Function @(
+    'Get-AiRulesPathComparison',
+    'Get-AiRulesPathStringComparer',
     'Get-AiRulesSafePath',
     'Get-AiRulesSha256',
     'Get-AiRulesSha256Text',

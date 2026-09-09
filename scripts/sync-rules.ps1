@@ -203,14 +203,14 @@ $writeItems = @($plan | Where-Object { $_.Action -in @('add', 'update') })
 $snapshots = [System.Collections.Generic.List[object]]::new()
 foreach ($item in $writeItems) {
     $validatedTargetPath = Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath $item.Target -Label 'managed target'
-    if ($validatedTargetPath -ne $item.TargetPath) {
+    if (-not [string]::Equals($validatedTargetPath, $item.TargetPath, (Get-AiRulesPathComparison))) {
         throw "Managed target изменился после построения Plan: $($item.Target)"
     }
     $snapshots.Add((New-AiRulesFileSnapshot -Path $item.TargetPath -Label 'Managed target'))
 }
 if ($lockChanged) {
     $validatedLockPath = Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath '.ai-rules/lock.json' -Label 'sync lock'
-    if ($validatedLockPath -ne $lockPath) {
+    if (-not [string]::Equals($validatedLockPath, $lockPath, (Get-AiRulesPathComparison))) {
         throw 'Путь lock изменился после построения Plan.'
     }
     $snapshots.Add((New-AiRulesFileSnapshot -Path $lockPath -Label 'Sync lock'))
@@ -220,7 +220,7 @@ $createdDirectories = [System.Collections.Generic.List[string]]::new()
 try {
     foreach ($item in $writeItems) {
         $validatedTargetPath = Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath $item.Target -Label 'managed target'
-        if ($validatedTargetPath -ne $item.TargetPath) {
+        if (-not [string]::Equals($validatedTargetPath, $item.TargetPath, (Get-AiRulesPathComparison))) {
             throw "Managed target изменился во время Apply: $($item.Target)"
         }
 

@@ -4,7 +4,7 @@ param()
 $ErrorActionPreference = 'Stop'
 $hubRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $projectRoot = Join-Path ([System.IO.Path]::GetTempPath()) "ai-rules-sync-plan-$([Guid]::NewGuid().ToString('N'))"
-$powershellExe = (Get-Command powershell.exe -ErrorAction Stop).Source
+$powershellExe = (Get-Process -Id $PID -ErrorAction Stop).Path
 
 try {
     New-Item -ItemType Directory -Path $projectRoot | Out-Null
@@ -26,7 +26,12 @@ try {
     if ($indexEntries[0].Sha256 -ne (Get-AiRulesSha256Text -Content $indexEntries[0].Content)) { throw 'Effective index hash must cover generated content.' }
     $secondPlan = Get-AiRulesSyncPlan -HubRoot $hubRoot -ProjectRoot $projectRoot
     if (@($secondPlan.Entries | Where-Object { $_.Target -eq '.ai-rules/upstream/INDEX.md' })[0].Content -ne $indexEntries[0].Content) { throw 'Effective index generation must be deterministic.' }
-    Write-Host 'Sync plan tests passed: 7 assertions.' -ForegroundColor Green
+    $expectedPathComparison = if ([System.IO.Path]::DirectorySeparatorChar -eq [char]'\') { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
+    if ((Get-AiRulesPathComparison) -ne $expectedPathComparison) { throw 'Path comparison must follow the current filesystem platform.' }
+    $caseBoundaryAccepted = $true
+    try { [void](Get-AiRulesSafePath -BasePath (Join-Path $projectRoot 'CaseBase') -ChildPath '../casebase/escape.md' -Label 'case boundary') } catch { $caseBoundaryAccepted = $false }
+    if (($env:OS -eq 'Windows_NT') -ne $caseBoundaryAccepted) { throw 'Path containment must follow filesystem case sensitivity.' }
+    Write-Host 'Sync plan tests passed: 9 assertions.' -ForegroundColor Green
 }
 finally {
     if (Test-Path -LiteralPath $projectRoot) { Remove-Item -LiteralPath $projectRoot -Recurse -Force }

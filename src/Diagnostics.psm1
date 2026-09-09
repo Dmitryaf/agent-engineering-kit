@@ -115,7 +115,7 @@ function Get-AiRulesLockSnapshotResults {
             $results.Add((New-AiRulesDiagnostic -Level 'ERROR' -Category 'lock' -Message $_.Exception.Message))
             continue
         }
-        if (-not $targetPath.StartsWith($upstreamPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        if (-not $targetPath.StartsWith($upstreamPrefix, (Get-AiRulesPathComparison))) {
             $results.Add((New-AiRulesDiagnostic -Level 'ERROR' -Category 'lock' -Message "Target из lock находится вне .ai-rules/upstream/: $target"))
             continue
         }

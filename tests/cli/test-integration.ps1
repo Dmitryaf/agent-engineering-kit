@@ -600,12 +600,13 @@ try {
     $reparseManifest.source.revision = $applyHubRevision
     [System.IO.File]::WriteAllText($reparseManifestPath, (($reparseManifest | ConvertTo-Json -Depth 6) + "`n"), (New-Object System.Text.UTF8Encoding($false)))
     $reparseUpstreamPath = Join-Path $reparseProjectRoot '.ai-rules/upstream'
-    New-Item -ItemType Junction -Path $reparseUpstreamPath -Target $reparseTargetRoot | Out-Null
+    $reparseItemType = if ($env:OS -eq 'Windows_NT') { 'Junction' } else { 'SymbolicLink' }
+    New-Item -ItemType $reparseItemType -Path $reparseUpstreamPath -Target $reparseTargetRoot | Out-Null
     $reparsePlan = Invoke-HubScript -ScriptPath $applySyncPath -Arguments @('-ProjectRoot', $reparseProjectRoot, '-Mode', 'Plan')
-    Assert-True -Condition ($reparsePlan.ExitCode -ne 0 -and $reparsePlan.Output -match 'reparse point') -Message "Plan must reject a managed path through a junction: $($reparsePlan.Output)"
+    Assert-True -Condition ($reparsePlan.ExitCode -ne 0 -and $reparsePlan.Output -match 'reparse point') -Message "Plan must reject a managed path through a filesystem link: $($reparsePlan.Output)"
     $reparseApply = Invoke-HubScript -ScriptPath $applySyncPath -Arguments @('-ProjectRoot', $reparseProjectRoot, '-Mode', 'Apply')
-    Assert-True -Condition ($reparseApply.ExitCode -ne 0 -and $reparseApply.Output -match 'reparse point') -Message 'Apply must reject a managed path through a junction before writing'
-    Assert-True -Condition (@(Get-ChildItem -LiteralPath $reparseTargetRoot -Force).Count -eq 0 -and -not (Test-Path -LiteralPath (Join-Path $reparseProjectRoot '.ai-rules/lock.json'))) -Message 'rejected junction path must leave both the external target and project lock unchanged'
+    Assert-True -Condition ($reparseApply.ExitCode -ne 0 -and $reparseApply.Output -match 'reparse point') -Message 'Apply must reject a managed path through a filesystem link before writing'
+    Assert-True -Condition (@(Get-ChildItem -LiteralPath $reparseTargetRoot -Force).Count -eq 0 -and -not (Test-Path -LiteralPath (Join-Path $reparseProjectRoot '.ai-rules/lock.json'))) -Message 'rejected linked path must leave both the external target and project lock unchanged'
 
     $cleanHubRoot = Join-Path $tempRoot 'clean hub fixture'
     New-Item -ItemType Directory -Path $cleanHubRoot | Out-Null
@@ -988,8 +989,9 @@ finally {
     $tempRootFull = [System.IO.Path]::GetFullPath($tempRoot)
     $tempPrefix = $tempBase + [System.IO.Path]::DirectorySeparatorChar
     $tempLeaf = Split-Path -Leaf $tempRootFull
+    $tempPathComparison = if ([System.IO.Path]::DirectorySeparatorChar -eq [char]'\') { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
     if (
-        $tempRootFull.StartsWith($tempPrefix, [System.StringComparison]::OrdinalIgnoreCase) -and
+        $tempRootFull.StartsWith($tempPrefix, $tempPathComparison) -and
         $tempLeaf.StartsWith('ai-rules-hub-tests-', [System.StringComparison]::Ordinal)
     ) {
         Remove-Item -LiteralPath $tempRootFull -Recurse -Force

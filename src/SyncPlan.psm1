@@ -78,7 +78,9 @@ function Get-AiRulesSyncPlan {
         throw 'В manifest обязательно поле source.revision; для незакреплённой подготовки используйте null.'
     }
 
-    $selectedSources = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    $pathComparer = Get-AiRulesPathStringComparer
+    $pathComparison = Get-AiRulesPathComparison
+    $selectedSources = New-Object 'System.Collections.Generic.HashSet[string]' ($pathComparer)
     $selectedTopics = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($coreFile in @($catalog.core)) {
         [void]$selectedSources.Add([string]$coreFile)
@@ -157,7 +159,7 @@ function Get-AiRulesSyncPlan {
     }
 
     $entries = [System.Collections.Generic.List[object]]::new()
-    $selectedTargets = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    $selectedTargets = New-Object 'System.Collections.Generic.HashSet[string]' ($pathComparer)
     foreach ($sourceRelativePath in @($selectedSources) | Sort-Object) {
         $sourceFullPath = Get-AiRulesSafePath -BasePath $hubRootFull -ChildPath $sourceRelativePath -Label 'catalog source'
         if (-not (Test-Path -LiteralPath $sourceFullPath -PathType Leaf)) {
@@ -234,7 +236,7 @@ function Get-AiRulesSyncPlan {
             continue
         }
         $managedPrefix = $destinationRelative.TrimEnd('/') + '/'
-        if (-not $oldTarget.StartsWith($managedPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        if (-not $oldTarget.StartsWith($managedPrefix, $pathComparison)) {
             throw "Target из lock находится вне managed-каталога upstream: $oldTarget"
         }
         $oldTargetFullPath = Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath $oldTarget -Label 'locked target'

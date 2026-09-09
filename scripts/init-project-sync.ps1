@@ -27,7 +27,7 @@ function Get-PathInsideRoot {
     $candidate = [System.IO.Path]::GetFullPath((Join-Path $rootFullPath $RelativePath))
     $prefix = $rootFullPath + [System.IO.Path]::DirectorySeparatorChar
 
-    if (-not $candidate.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    if (-not $candidate.StartsWith($prefix, (Get-AiRulesPathComparison))) {
         throw "$Label выходит за пределы корня проекта: $RelativePath"
     }
 
