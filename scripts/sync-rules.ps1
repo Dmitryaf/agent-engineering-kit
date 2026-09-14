@@ -98,7 +98,6 @@ $lockPath = Get-AiRulesSafePath -BasePath $projectRootFull -ChildPath '.ai-rules
 $revision = $syncPlan.HubRevision
 $sourceDirty = $syncPlan.HubDirty
 $expectedRevision = $syncPlan.ExpectedRevision
-$previousLock = $syncPlan.PreviousLock
 $selectedTopics = @($syncPlan.Topics)
 $plan = @($syncPlan.Entries)
 
@@ -164,9 +163,14 @@ $lockEntries = @(
         }
 )
 
+$existingLockJson = $null
 $generatedAtUtc = [DateTime]::UtcNow.ToString('o')
-if ($null -ne $previousLock -and -not [string]::IsNullOrWhiteSpace([string]$previousLock.generatedAtUtc)) {
-    $generatedAtUtc = [string]$previousLock.generatedAtUtc
+if (Test-Path -LiteralPath $lockPath -PathType Leaf) {
+    $existingLockJson = [System.IO.File]::ReadAllText($lockPath).TrimEnd([char[]]@("`r", "`n"))
+    $generatedAtMatch = [regex]::Match($existingLockJson, '"generatedAtUtc"\s*:\s*"(?<value>[^"]+)"')
+    if ($generatedAtMatch.Success) {
+        $generatedAtUtc = $generatedAtMatch.Groups['value'].Value
+    }
 }
 
 $lockObject = [ordered]@{
@@ -187,8 +191,7 @@ $lockObject = [ordered]@{
 
 $lockJson = ConvertTo-AiRulesJson -InputObject $lockObject -Depth 10
 $lockChanged = $true
-if (Test-Path -LiteralPath $lockPath -PathType Leaf) {
-    $existingLockJson = [System.IO.File]::ReadAllText($lockPath).TrimEnd([char[]]@("`r", "`n"))
+if ($null -ne $existingLockJson) {
     if ($existingLockJson -eq $lockJson.TrimEnd([char[]]@("`r", "`n"))) {
         $lockChanged = $false
     }
