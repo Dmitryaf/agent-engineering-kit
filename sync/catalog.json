@@ -31,7 +31,7 @@
       "file": "rules/QUALITY.md",
       "kind": "rule",
       "description": "Тестирование, проверки и критерии завершения изменений.",
-      "readWhen": "При выборе проверок, изменении тестов или оценке готовности."
+      "readWhen": "До реализации при выборе критериев приёмки и проверок; при изменении тестов или оценке готовности."
     },
     "reliability-and-operations": {
       "file": "rules/RELIABILITY_AND_OPERATIONS.md",
