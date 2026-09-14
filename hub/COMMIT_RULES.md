@@ -1,4 +1,4 @@
-# Правила коммитов AI Rules Hub
+# Правила коммитов Agent Engineering Kit
 
 ## Формат
 

@@ -1,4 +1,4 @@
-name: Validate rules hub
+name: Validate agent engineering kit
 
 on:
   pull_request:

@@ -1,14 +1,16 @@
-# AI Rules Hub
+# Agent Engineering Kit
 
-AI Rules Hub adds ready-to-use rules for AI coding agents to your project. Once connected, keep working in your project as usual. The agent will find and read the relevant rules automatically.
+Agent Engineering Kit gives AI coding agents a compact, versioned set of engineering rules for working in real repositories. It helps agents preserve task scope, use evidence, respect project boundaries, and choose checks that observe the intended result.
+
+Connect the kit once, then keep working in your project as usual. The agent reads only the rules relevant to the current task.
 
 ## Install
 
 You need Git and Windows PowerShell 5.1 or PowerShell 7.
 
 ```powershell
-git clone https://github.com/Dmitryaf/ai-rules-hub.git
-Set-Location ai-rules-hub
+git clone https://github.com/Dmitryaf/agent-engineering-kit.git
+Set-Location agent-engineering-kit
 ```
 
 ## Connect a project
@@ -27,7 +29,7 @@ Copy the generated prompt into the AI agent working on that project. The agent w
 4. wait for your approval;
 5. connect the rules and verify the result.
 
-Then return to your normal project work. You do not need to learn how the hub works or select rule files manually.
+Then return to your normal project work. You do not need to learn how the kit works or select rule files manually.
 
 ## Update rules
 
@@ -43,9 +45,9 @@ If they look correct, apply them:
 .\ai-rules.ps1 update -ProjectRoot C:\path\to\project -Apply
 ```
 
-The hub does not change your project without `-Apply`, overwrite rule files you changed manually, or run `commit`, `push`, or publishing commands.
+The kit does not change your project without `-Apply`, overwrite rule files you changed manually, or run `commit`, `push`, or publishing commands.
 
-## Hub development
+## Kit development
 
 The architecture and low-level commands are documented in [`hub/ARCHITECTURE.md`](hub/ARCHITECTURE.md) and [`sync/README.md`](sync/README.md). Contribution and security guidance is available in [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`.github/SECURITY.md`](.github/SECURITY.md).
 

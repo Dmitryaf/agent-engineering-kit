@@ -31,7 +31,7 @@ Import-Module (Join-Path $hubRoot 'src/Diagnostics.psm1') -ErrorAction Stop
 
 function Write-Help {
     @'
-AI Rules Hub
+Agent Engineering Kit
 
 Подключить проект
 
@@ -284,7 +284,7 @@ function Invoke-ProjectDoctor {
                 $null -eq $manifest.PSObject.Properties['topics'] -or
                 $null -eq $manifest.source -or
                 $null -eq $manifest.source.PSObject.Properties['revision'] -or
-                [string]$manifest.source.repository -ne 'ai-rules-hub'
+                [string]::IsNullOrWhiteSpace([string]$manifest.source.repository)
             ) {
                 Add-DoctorResult -Level 'ERROR' -Message 'В .ai-rules/manifest.json отсутствуют обязательные поля source, profiles или topics.' -Errors $errors -Warnings $warnings
             }
@@ -402,14 +402,14 @@ function Invoke-ProjectDoctor {
         $routeState = Get-AiRulesAgentRouteState -Content $agentsContent
         if ($routeState.MissingRequiredRoutes.Count -gt 0) {
             if ($pinned) {
-                Add-DoctorResult -Level 'ERROR' -Message "Закреплённый проект не подключает обязательные маршруты AI Rules Hub. Объедините существующий AGENTS.md с templates/AGENTS.md. Отсутствуют: $($routeState.MissingRequiredRoutes -join ', ')." -Errors $errors -Warnings $warnings
+                Add-DoctorResult -Level 'ERROR' -Message "Закреплённый проект не подключает обязательные маршруты Agent Engineering Kit. Объедините существующий AGENTS.md с templates/AGENTS.md. Отсутствуют: $($routeState.MissingRequiredRoutes -join ', ')." -Errors $errors -Warnings $warnings
             }
             else {
                 Add-DoctorResult -Level 'WARN' -Message "AGENTS.md пока не подключает правила хаба. Объедините существующий файл с templates/AGENTS.md. Отсутствуют: $($routeState.MissingRequiredRoutes -join ', ')." -Errors $errors -Warnings $warnings
             }
         }
         else {
-            Add-DoctorResult -Level 'OK' -Message 'AGENTS.md содержит стандартные маршруты AI Rules Hub.' -Errors $errors -Warnings $warnings
+            Add-DoctorResult -Level 'OK' -Message 'AGENTS.md содержит стандартные маршруты Agent Engineering Kit.' -Errors $errors -Warnings $warnings
         }
 
         foreach ($route in $routeState.RequiredRoutes) {
@@ -639,6 +639,7 @@ function Invoke-Update {
 
     $originalManifestBytes = [System.IO.File]::ReadAllBytes($manifestPath)
     $temporaryManifestPath = Join-Path (Split-Path -Parent $manifestPath) "manifest.$([Guid]::NewGuid().ToString('N')).tmp"
+    $manifest.source.repository = 'agent-engineering-kit'
     $manifest.source.revision = $hubState.Revision
     $manifestJson = (ConvertTo-AiRulesJson -InputObject $manifest -Depth 10) + "`n"
     try {

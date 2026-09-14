@@ -88,7 +88,7 @@ hub checkout + project manifest
 
 ### `hub/`
 
-Продуктовые и архитектурные правила самого AI Rules Hub и решения о структуре.
+Продуктовые и архитектурные правила самого Agent Engineering Kit и решения о структуре.
 
 ### `evals/`
 

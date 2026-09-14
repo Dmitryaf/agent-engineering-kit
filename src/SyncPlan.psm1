@@ -71,8 +71,8 @@ function Get-AiRulesSyncPlan {
     if ($null -eq $manifest.source.PSObject.Properties['repository']) {
         throw 'В manifest обязательно поле source.repository.'
     }
-    if ([string]$manifest.source.repository -ne 'ai-rules-hub') {
-        throw "Неподдерживаемый source repository: $($manifest.source.repository)"
+    if ([string]::IsNullOrWhiteSpace([string]$manifest.source.repository)) {
+        throw 'Поле source.repository не должно быть пустым.'
     }
     if ($null -eq $manifest.source.PSObject.Properties['revision']) {
         throw 'В manifest обязательно поле source.revision; для незакреплённой подготовки используйте null.'

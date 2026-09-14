@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "AI Rules Hub project sync manifest",
+  "title": "Agent Engineering Kit project sync manifest",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "source", "topics", "profiles"],

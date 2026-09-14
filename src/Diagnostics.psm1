@@ -179,7 +179,7 @@ function Get-AiRulesStatusAssessment {
         $diagnostics.Add('в manifest.json отсутствует source.')
     }
     else {
-        if ($null -eq $manifest.source.PSObject.Properties['repository'] -or [string]$manifest.source.repository -ne 'ai-rules-hub') { $diagnostics.Add('manifest source.repository отсутствует или не поддерживается.') }
+        if ($null -eq $manifest.source.PSObject.Properties['repository'] -or [string]::IsNullOrWhiteSpace([string]$manifest.source.repository)) { $diagnostics.Add('manifest source.repository отсутствует.') }
         if ($null -eq $manifest.source.PSObject.Properties['revision']) { $diagnostics.Add('в manifest.json отсутствует поле source.revision.') }
     }
     if (-not [string]::IsNullOrWhiteSpace($ProjectState.SelectionError)) { $diagnostics.Add($ProjectState.SelectionError) }
@@ -224,7 +224,7 @@ function Get-AiRulesStatusAssessment {
     }
     else {
         $routes = Get-AiRulesAgentRouteState -Content (Get-Content -LiteralPath $ProjectState.Paths.Agents -Raw -Encoding UTF8)
-        if ($routes.MissingRequiredRoutes.Count -gt 0) { $diagnostics.Add("закреплённый проект не подключает обязательные маршруты AI Rules Hub: $($routes.MissingRequiredRoutes -join ', ').") }
+        if ($routes.MissingRequiredRoutes.Count -gt 0) { $diagnostics.Add("закреплённый проект не подключает обязательные маршруты Agent Engineering Kit: $($routes.MissingRequiredRoutes -join ', ').") }
     }
     if (-not $ProjectState.Found.Ruleset) { $diagnostics.Add('для закреплённого проекта отсутствует .ai-rules/RULESET.md.') }
     if (-not $ProjectState.Found.ProjectRules) { $diagnostics.Add('для закреплённого проекта отсутствует .ai-rules/PROJECT_RULES.md.') }

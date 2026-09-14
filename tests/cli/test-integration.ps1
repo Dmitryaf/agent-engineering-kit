@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 $hubRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $powershellExe = (Get-Process -Id $PID -ErrorAction Stop).Path
 $tempBase = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd([char[]]@('\', '/'))
-$tempRoot = Join-Path $tempBase "ai-rules-hub-tests-$([Guid]::NewGuid().ToString('N'))"
+$tempRoot = Join-Path $tempBase "agent-engineering-kit-tests-$([Guid]::NewGuid().ToString('N'))"
 $assertionCount = 0
 
 function Assert-True {
@@ -117,6 +117,7 @@ try {
     $testEntryPoint = Get-Content -LiteralPath (Join-Path $hubRoot 'tests/test-tooling.ps1') -Raw -Encoding UTF8
     $testRunner = Get-Content -LiteralPath (Join-Path $hubRoot 'tests/run.ps1') -Raw -Encoding UTF8
     $syncPlanTest = Get-Content -LiteralPath (Join-Path $hubRoot 'tests/sync/test-sync-plan.ps1') -Raw -Encoding UTF8
+    $commitHookIndexEntry = (& git -C $hubRoot ls-files --stage -- .githooks/commit-msg) -join ''
     $catalog = Get-Content -LiteralPath (Join-Path $hubRoot 'sync/catalog.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 
     $crlfHubRoot = Join-Path $tempRoot 'crlf hub fixture'
@@ -183,6 +184,7 @@ try {
     Assert-True -Condition ($validationWorkflow -match '(?m)^permissions:\s*\r?\n\s+contents:\s*read\s*$' -and $validationWorkflow -match 'actions/checkout@[0-9a-f]{40}' -and $validationWorkflow -match 'persist-credentials:\s*false') -Message 'validation workflow must be read-only and use pinned checkout without persisted credentials'
     Assert-True -Condition ($validationWorkflow -match 'validate-pwsh-windows:' -and $validationWorkflow -match 'validate-pwsh-ubuntu-experimental:' -and $validationWorkflow -match 'continue-on-error:\s*true' -and ([regex]::Matches($validationWorkflow, 'shell:\s*pwsh')).Count -eq 4) -Message 'validation workflow must run the full pwsh suite on Windows and experimental Ubuntu'
     Assert-True -Condition ((@($testEntryPoint, $testRunner, $syncPlanTest) | Where-Object { $_ -notmatch 'Get-Process -Id \$PID' -or $_ -match 'Get-Command powershell\.exe' } | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) -Message 'test runners must preserve the current PowerShell host'
+    Assert-True -Condition ($commitHookIndexEntry -match '^100755 ') -Message 'repository commit-msg hook must be executable on Unix runners'
     Assert-True -Condition ((Test-Path -LiteralPath (Join-Path $hubRoot 'CONTRIBUTING.md')) -and (Test-Path -LiteralPath (Join-Path $hubRoot '.github/SECURITY.md'))) -Message 'public repository entry points must exist'
     Assert-True -Condition ($hubCheck -match 'LICENSE\.md' -and $hubCheck -match 'GitHub-discoverable CONTRIBUTING' -and $hubCheck -match 'workflows/PROJECT_CONNECT_PROMPT\.md' -and $hubCheck -match 'workflows/PROJECT_AUDIT_PROMPT\.md' -and $hubCheck -match 'full 40-character commit SHA' -and $hubCheck -match 'undesiredEnglishProse') -Message 'hub check must enforce public repository hygiene, onboarding workflows, and one-language prose'
     Assert-True -Condition ($hubCheck -match 'hub/BACKLOG\.md' -and $hubCheck -match "'hub/decisions'" -and $hubCheck -match '\.local-docs/') -Message 'hub check must reject owner-only public documents and require an ignored local location'
@@ -217,8 +219,8 @@ try {
     Assert-True -Condition ($projectAuditPrompt -match 'похожие сценарии, экраны и операции' -and $projectAuditPrompt -match 'не исправлен ли только один вариант' -and $projectAuditPrompt -match 'путь нового разработчика' -and $projectAuditPrompt -match 'Большой файл считай только сигналом' -and $projectAuditPrompt -match 'повторяющиеся разрывы по классам') -Message 'project audit prompt must compare analogous scenarios, assess human onboarding, and group repeated gaps by system layer'
     $agentFacingText = @($agentsTemplate, $rulesetTemplate, $projectConnectPrompt, $projectAuditPrompt, (Get-Content -LiteralPath (Join-Path $hubRoot 'src/EffectiveIndex.psm1') -Raw -Encoding UTF8), (Get-Content -LiteralPath (Join-Path $hubRoot 'sync/catalog.json') -Raw -Encoding UTF8)) -join "`n"
     Assert-True -Condition ($agentFacingText -notmatch '(?i)project-owned|initializer|managed-файл|effective-набор|profiles и topics|проектный status|\brevision\b|AI-агент|AI-инструмент|\bUI\b') -Message 'agent-facing text must avoid unnecessary English words in Russian prose'
-    $userReadme = @($rootReadme -split '(?m)^## Hub development\s*$', 2)[0]
-    Assert-True -Condition ($userReadme -match 'prompt connect' -and $userReadme -match 'return to your normal project work' -and $userReadme -match 'do not need to learn how the hub works' -and $templatesReadme -match 'workflows/PROJECT_CONNECT_PROMPT\.md' -and $templatesReadme -match 'workflows/PROJECT_AUDIT_PROMPT\.md') -Message 'onboarding docs must lead to ordinary project work without exposing hub internals'
+    $userReadme = @($rootReadme -split '(?m)^## Kit development\s*$', 2)[0]
+    Assert-True -Condition ($userReadme -match 'prompt connect' -and $userReadme -match 'return to your normal project work' -and $userReadme -match 'do not need to learn how the kit works' -and $templatesReadme -match 'workflows/PROJECT_CONNECT_PROMPT\.md' -and $templatesReadme -match 'workflows/PROJECT_AUDIT_PROMPT\.md') -Message 'onboarding docs must lead to ordinary project work without exposing kit internals'
     Assert-True -Condition ($userReadme -notmatch '(?i)manifest|lock\.json|revision|profiles|topics|workflow|effective|catalog|upstream|SyncPlan|State:' -and ([regex]::Matches($userReadme, '(?m)^## ')).Count -eq 3) -Message 'public user path must stay short and free of internal vocabulary'
     Assert-True -Condition ($templatesReadme -match 'Обычному пользователю не нужно выбирать или копировать шаблоны вручную' -and $syncReadme -match 'Обычному пользователю этот документ не нужен' -and $syncReadme -match '`status` показывает краткое состояние.*`doctor` подробно проверяет') -Message 'internal guides must send ordinary users back to the short public path and separate status from diagnostics'
     $topicLengths = @($catalog.topics.PSObject.Properties | ForEach-Object { (Get-Content -LiteralPath (Join-Path $hubRoot ([string]$_.Value.file)) -Raw -Encoding UTF8).Length })
@@ -241,11 +243,11 @@ try {
     Assert-True -Condition ($helpResult.ExitCode -eq 0 -and $helpResult.Output -match 'git pull' -and $helpResult.Output -match 'git fetch') -Message 'CLI help must pass and explain the no-fetch boundary'
     Assert-True -Condition ($helpResult.Output -match 'Подключить проект' -and $helpResult.Output -match 'Обновить правила' -and $helpResult.Output -match 'Команды без -Apply только показывают' -and $helpResult.Output -notmatch '(?i:revision|manifest|checkout|preview|\bCLI\b)|(?-i:\bPlan\b)') -Message 'CLI help must put the ordinary user path first and avoid internal vocabulary'
     $auditPromptResult = Invoke-HubScript -ScriptPath $cliPath -Arguments @('prompt', 'audit')
-    Assert-True -Condition ($auditPromptResult.ExitCode -eq 0 -and $auditPromptResult.Output -match '^Заверши подключение AI Rules Hub' -and $auditPromptResult.Output -match 'Этап 1 — завершение подключения' -and $auditPromptResult.Output -match 'Этап 2 — проверка только для чтения' -and $auditPromptResult.Output -notmatch '```') -Message 'CLI must print the reusable audit prompt without its Markdown wrapper'
+    Assert-True -Condition ($auditPromptResult.ExitCode -eq 0 -and $auditPromptResult.Output -match '^Заверши подключение Agent Engineering Kit' -and $auditPromptResult.Output -match 'Этап 1 — завершение подключения' -and $auditPromptResult.Output -match 'Этап 2 — проверка только для чтения' -and $auditPromptResult.Output -notmatch '```') -Message 'CLI must print the reusable audit prompt without its Markdown wrapper'
     $promptProjectRoot = Join-Path $tempRoot 'prompt project'
     New-Item -ItemType Directory -Path $promptProjectRoot | Out-Null
     $connectPromptResult = Invoke-HubScript -ScriptPath $cliPath -Arguments @('prompt', 'connect', '-ProjectRoot', $promptProjectRoot)
-    Assert-True -Condition ($connectPromptResult.ExitCode -eq 0 -and $connectPromptResult.Output -match '^Подключи этот проект к AI Rules Hub' -and $connectPromptResult.Output.Contains($promptProjectRoot) -and $connectPromptResult.Output.Contains($cliPath) -and $connectPromptResult.Output -notmatch '\{\{|```') -Message 'CLI must print a project-specific connection prompt without Markdown wrappers or placeholders'
+    Assert-True -Condition ($connectPromptResult.ExitCode -eq 0 -and $connectPromptResult.Output -match '^Подключи этот проект к Agent Engineering Kit' -and $connectPromptResult.Output.Contains($promptProjectRoot) -and $connectPromptResult.Output.Contains($cliPath) -and $connectPromptResult.Output -notmatch '\{\{|```') -Message 'CLI must print a project-specific connection prompt without Markdown wrappers or placeholders'
     $unknownPromptResult = Invoke-HubScript -ScriptPath $cliPath -Arguments @('prompt', 'missing')
     Assert-True -Condition ($unknownPromptResult.ExitCode -ne 0 -and $unknownPromptResult.Output.Contains("'connect'") -and $unknownPromptResult.Output.Contains("'audit'")) -Message 'CLI prompt command must reject unknown prompt names'
     $profilesResult = Invoke-HubScript -ScriptPath $cliPath -Arguments @('list', 'profiles')
@@ -308,7 +310,7 @@ try {
     Assert-True -Condition ($LASTEXITCODE -eq 0) -Message 'clean apply fixture must keep copied line endings stable'
     & git -C $applyHubRoot add --all
     Assert-True -Condition ($LASTEXITCODE -eq 0) -Message 'clean apply fixture files must stage'
-    & git -C $applyHubRoot -c user.name='AI Rules Hub Tests' -c user.email='tests@example.invalid' commit --quiet -m 'test(sync): create apply fixture'
+    & git -C $applyHubRoot -c user.name='Agent Engineering Kit Tests' -c user.email='tests@example.invalid' commit --quiet -m 'test(sync): create apply fixture'
     Assert-True -Condition ($LASTEXITCODE -eq 0) -Message 'clean apply fixture must create a commit'
     $applyCliPath = Join-Path $applyHubRoot 'ai-rules.ps1'
     $applySyncPath = Join-Path $applyHubRoot 'scripts/sync-rules.ps1'
@@ -428,13 +430,13 @@ try {
     $existingProjectSurfaceAfterReads = @($existingProjectSurfacePaths | ForEach-Object { [Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $existingFilesProjectRoot $_))) })
     Assert-True -Condition (($existingProjectSurfaceAfterReads -join "`n") -eq ($existingProjectSurfaceBefore -join "`n")) -Message 'doctor, status, and plan must preserve existing README, docs, and source byte-for-byte'
 
-    $legacyProjectRoot = Join-Path $tempRoot 'legacy project'
-    New-Item -ItemType Directory -Path $legacyProjectRoot | Out-Null
-    Set-Content -LiteralPath (Join-Path $legacyProjectRoot '.ai-rules-hub.json') -Value '{}' -Encoding UTF8
-    $legacyInit = Invoke-HubScript -ScriptPath $initializerPath -Arguments @('-ProjectRoot', $legacyProjectRoot)
-    Assert-True -Condition ($legacyInit.ExitCode -ne 0) -Message 'initializer must stop on a legacy root manifest'
-    Assert-True -Condition ($legacyInit.Output -match 'legacy' -and $legacyInit.Output -match 'явно') -Message 'legacy error must require explicit migration'
-    Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $legacyProjectRoot '.ai-rules'))) -Message 'legacy detection must not create the new structure'
+    $unsupportedRootProject = Join-Path $tempRoot 'unsupported root sync project'
+    New-Item -ItemType Directory -Path $unsupportedRootProject | Out-Null
+    Set-Content -LiteralPath (Join-Path $unsupportedRootProject '.ai-obsolete-sync.json') -Value '{}' -Encoding UTF8
+    $unsupportedRootInit = Invoke-HubScript -ScriptPath $initializerPath -Arguments @('-ProjectRoot', $unsupportedRootProject)
+    Assert-True -Condition ($unsupportedRootInit.ExitCode -ne 0) -Message 'initializer must stop on an unsupported root sync file'
+    Assert-True -Condition ($unsupportedRootInit.Output -match 'неподдерживаемый' -and $unsupportedRootInit.Output -match 'явно') -Message 'unsupported root sync error must require explicit migration'
+    Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $unsupportedRootProject '.ai-rules'))) -Message 'unsupported root sync detection must not create the new structure'
 
     $projectRoot = Join-Path $tempRoot 'target project with spaces'
     New-Item -ItemType Directory -Path $projectRoot | Out-Null
@@ -459,8 +461,7 @@ try {
     Assert-True -Condition ((Get-Content -LiteralPath (Join-Path $projectRoot 'AGENTS.md') -Raw -Encoding UTF8).Trim() -eq '# Local agent rules') -Message 'initializer must not overwrite local AGENTS.md'
     Assert-True -Condition (Test-Path -LiteralPath $rulesetPath) -Message 'initializer must seed nested RULESET.md'
     Assert-True -Condition (Test-Path -LiteralPath $projectRulesPath) -Message 'initializer must seed nested PROJECT_RULES.md'
-    Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $projectRoot '.ai-rules-hub.json'))) -Message 'initializer must not create old root manifest'
-    Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $projectRoot '.ai-rules-hub.lock.json'))) -Message 'initializer must not create old root lock'
+    Assert-True -Condition (@(Get-ChildItem -LiteralPath $projectRoot -Force -File -Filter '.ai-*.json').Count -eq 0) -Message 'initializer must not create root sync JSON files'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $projectRoot 'RULESET.md'))) -Message 'initializer must not create root RULESET.md'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $projectRoot 'PROJECT_RULES.md'))) -Message 'initializer must not create root PROJECT_RULES.md'
 
@@ -673,7 +674,7 @@ try {
     Assert-True -Condition ($LASTEXITCODE -eq 0) -Message 'clean update fixture must keep copied line endings stable'
     & git -C $cleanHubRoot add --all
     Assert-True -Condition ($LASTEXITCODE -eq 0) -Message 'clean update fixture files must stage'
-    & git -C $cleanHubRoot -c user.name='AI Rules Hub Tests' -c user.email='tests@example.invalid' commit --quiet -m 'test(sync): create clean fixture'
+    & git -C $cleanHubRoot -c user.name='Agent Engineering Kit Tests' -c user.email='tests@example.invalid' commit --quiet -m 'test(sync): create clean fixture'
     Assert-True -Condition ($LASTEXITCODE -eq 0) -Message 'clean update fixture must create a commit'
 
     $cleanCliPath = Join-Path $cleanHubRoot 'ai-rules.ps1'
@@ -718,16 +719,19 @@ try {
     New-Item -ItemType Directory -Path $updateProjectRoot | Out-Null
     $cleanInit = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('init', '-ProjectRoot', $updateProjectRoot, '-Profiles', 'standard-product,learning-project', '-Topics', 'project-study')
     Assert-True -Condition ($cleanInit.ExitCode -eq 0) -Message "clean CLI init must pass: $($cleanInit.Output)"
+    $updateManifestPath = Join-Path $updateProjectRoot '.ai-rules/manifest.json'
+    $renamedSourceManifest = Get-Content -LiteralPath $updateManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $renamedSourceManifest.source.repository = 'previous-source-name'
+    [System.IO.File]::WriteAllText($updateManifestPath, (($renamedSourceManifest | ConvertTo-Json -Depth 6) + "`n"), (New-Object System.Text.UTF8Encoding($false)))
     $cleanInitialApply = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('update', '-ProjectRoot', $updateProjectRoot, '-Apply')
     Assert-True -Condition ($cleanInitialApply.ExitCode -eq 0) -Message "first update -Apply must pin and synchronize the project: $($cleanInitialApply.Output)"
     Assert-True -Condition (Test-Path -LiteralPath (Join-Path $updateProjectRoot '.ai-rules/upstream/workflows/PROJECT_STUDY.md')) -Message 'sync must copy explicitly selected project-study workflow'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $updateProjectRoot '.ai-rules/upstream/rules/RELIABILITY_AND_OPERATIONS.md'))) -Message 'project-study selection must not pull reliability implicitly'
 
-    $updateManifestPath = Join-Path $updateProjectRoot '.ai-rules/manifest.json'
     $updateLockPath = Join-Path $updateProjectRoot '.ai-rules/lock.json'
     $initialCleanHubRevision = (& git -C $cleanHubRoot rev-parse HEAD).Trim()
     $initialUpdateManifest = Get-Content -LiteralPath $updateManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    Assert-True -Condition ($initialUpdateManifest.source.revision -eq $initialCleanHubRevision) -Message 'first update -Apply must write the initial clean hub revision'
+    Assert-True -Condition ($initialUpdateManifest.source.repository -eq 'agent-engineering-kit' -and $initialUpdateManifest.source.revision -eq $initialCleanHubRevision) -Message 'first update -Apply must migrate the source name and write the initial clean hub revision'
     $initialUpdateLockText = Get-Content -LiteralPath $updateLockPath -Raw -Encoding UTF8
     Assert-True -Condition ($initialUpdateLockText -match '(?m)^  "source": \{$' -and $initialUpdateLockText -match '(?m)^  "profiles": \["learning-project", "standard-product"\],$' -and $initialUpdateLockText -notmatch "`r" -and $initialUpdateLockText -notmatch '(?m)^\s+"[^"]+":[ \t]{2,}') -Message 'sync must write stable compact LF JSON formatting'
     $updateRulesetPath = Join-Path $updateProjectRoot '.ai-rules/RULESET.md'
@@ -877,7 +881,7 @@ try {
 
     Set-Content -LiteralPath (Join-Path $cleanHubRoot 'fixture-revision.txt') -Value 'second clean revision' -Encoding UTF8
     & git -C $cleanHubRoot add fixture-revision.txt
-    & git -C $cleanHubRoot -c user.name='AI Rules Hub Tests' -c user.email='tests@example.invalid' commit --quiet -m 'test(sync): advance fixture revision'
+    & git -C $cleanHubRoot -c user.name='Agent Engineering Kit Tests' -c user.email='tests@example.invalid' commit --quiet -m 'test(sync): advance fixture revision'
     Assert-True -Condition ($LASTEXITCODE -eq 0) -Message 'clean update fixture must advance to a second revision'
     $secondCleanHubRevision = (& git -C $cleanHubRoot rev-parse HEAD).Trim()
     $updateAvailableSnapshot = Get-TreeSnapshot -Root $updateProjectRoot
@@ -909,7 +913,7 @@ try {
     & git -C $cleanHubRoot checkout --quiet -b relation-diverged $initialCleanHubRevision
     Set-Content -LiteralPath (Join-Path $cleanHubRoot 'diverged-revision.txt') -Value 'diverged revision' -Encoding UTF8
     & git -C $cleanHubRoot add diverged-revision.txt
-    & git -C $cleanHubRoot -c user.name='AI Rules Hub Tests' -c user.email='tests@example.invalid' commit --quiet -m 'test(sync): create diverged revision'
+    & git -C $cleanHubRoot -c user.name='Agent Engineering Kit Tests' -c user.email='tests@example.invalid' commit --quiet -m 'test(sync): create diverged revision'
     Assert-True -Condition ($LASTEXITCODE -eq 0) -Message 'relation fixture must create a diverged revision'
     $checkoutDivergedSnapshot = Get-TreeSnapshot -Root $updateProjectRoot
     $checkoutDivergedStatus = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('status', '-ProjectRoot', $updateProjectRoot)
@@ -1004,7 +1008,7 @@ finally {
     $tempPathComparison = if ([System.IO.Path]::DirectorySeparatorChar -eq [char]'\') { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
     if (
         $tempRootFull.StartsWith($tempPrefix, $tempPathComparison) -and
-        $tempLeaf.StartsWith('ai-rules-hub-tests-', [System.StringComparison]::Ordinal)
+        $tempLeaf.StartsWith('agent-engineering-kit-tests-', [System.StringComparison]::Ordinal)
     ) {
         Remove-Item -LiteralPath $tempRootFull -Recurse -Force
     }

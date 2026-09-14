@@ -49,7 +49,7 @@ function New-AiRulesEffectiveIndexContent {
     $lines = [System.Collections.Generic.List[string]]::new()
     $lines.Add('# Индекс подключённых правил')
     $lines.Add('')
-    $lines.Add('<!-- Сгенерировано AI Rules Hub из `sync/catalog.json` и `.ai-rules/manifest.json`. Не редактировать вручную. -->')
+    $lines.Add('<!-- Сгенерировано Agent Engineering Kit из `sync/catalog.json` и `.ai-rules/manifest.json`. Не редактировать вручную. -->')
     $lines.Add('')
     $lines.Add('Этот файл показывает, какие правила читать. Точный состав и версию смотри в `.ai-rules/manifest.json` и `.ai-rules/lock.json`.')
     $lines.Add('')

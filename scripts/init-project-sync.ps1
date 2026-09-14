@@ -114,15 +114,9 @@ foreach ($profile in $Profiles) {
 
 $localRulesRoot = Get-PathInsideRoot -Root $projectRootFull -RelativePath '.ai-rules' -Label 'Local rules directory'
 $manifestPath = Join-Path $localRulesRoot 'manifest.json'
-$legacyPaths = @(
-    (Join-Path $projectRootFull '.ai-rules-hub.json'),
-    (Join-Path $projectRootFull '.ai-rules-hub.lock.json')
-)
-
-foreach ($legacyPath in $legacyPaths) {
-    if (Test-Path -LiteralPath $legacyPath) {
-        throw "Обнаружен legacy sync-файл. Просмотрите и перенесите его явно до инициализации: $legacyPath"
-    }
+$unsupportedRootSyncFiles = @(Get-ChildItem -LiteralPath $projectRootFull -Force -File -Filter '.ai-*.json')
+foreach ($unsupportedRootSyncFile in $unsupportedRootSyncFiles) {
+    throw "Обнаружен неподдерживаемый корневой sync-файл. Просмотрите и перенесите его явно до инициализации: $($unsupportedRootSyncFile.FullName)"
 }
 
 if (Test-Path -LiteralPath $manifestPath) {
@@ -137,7 +131,7 @@ if (-not (Test-Path -LiteralPath $localRulesRoot -PathType Container)) {
 $manifest = [ordered]@{
     schemaVersion = '0.2'
     source = [ordered]@{
-        repository = 'ai-rules-hub'
+        repository = 'agent-engineering-kit'
         revision = $null
     }
     topics = @($Topics | Sort-Object -Unique)

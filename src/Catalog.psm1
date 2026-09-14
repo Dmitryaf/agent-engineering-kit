@@ -39,11 +39,17 @@ function Assert-AiRulesSelections {
     $availableProfiles = @($Catalog.profiles.PSObject.Properties.Name)
     $availableTopics = @($Catalog.topics.PSObject.Properties.Name)
     foreach ($profile in @($SelectedProfiles)) {
+        if ([string]::IsNullOrWhiteSpace([string]$profile)) {
+            continue
+        }
         if ($profile -notin $availableProfiles) {
             throw "Неизвестный профиль '$profile'. Доступны: $($availableProfiles -join ', ')"
         }
     }
     foreach ($topic in @($SelectedTopics)) {
+        if ([string]::IsNullOrWhiteSpace([string]$topic)) {
+            continue
+        }
         if ($topic -notin $availableTopics) {
             throw "Неизвестная тема '$topic'. Доступны: $($availableTopics -join ', ')"
         }

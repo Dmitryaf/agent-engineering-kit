@@ -231,14 +231,14 @@ foreach ($file in $markdownFiles) {
 $rootReadmePath = Join-Path $repoRoot 'README.md'
 if (Test-Path -LiteralPath $rootReadmePath -PathType Leaf) {
     $rootReadmeContent = Get-Content -LiteralPath $rootReadmePath -Raw -Encoding UTF8
-    $readmeParts = @($rootReadmeContent -split '(?m)^## Hub development\s*$', 2)
+    $readmeParts = @($rootReadmeContent -split '(?m)^## Kit development\s*$', 2)
     if ($readmeParts.Count -ne 2) {
         $errors.Add('README.md must separate the short user path from maintainer details.')
     }
     else {
         $userReadme = $readmeParts[0]
         if ($userReadme -match '(?i)manifest|lock\.json|revision|profiles|topics|workflow|effective|catalog|upstream|SyncPlan|State:') {
-            $errors.Add('README.md user path must not expose internal hub vocabulary.')
+            $errors.Add('README.md user path must not expose internal kit vocabulary.')
         }
         if (([regex]::Matches($userReadme, '(?m)^## ')).Count -ne 3) {
             $errors.Add('README.md user path must contain only installation, connection, and update sections.')

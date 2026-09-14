@@ -1,4 +1,4 @@
-# Правила развития AI Rules Hub
+# Правила развития Agent Engineering Kit
 
 ## Назначение
 

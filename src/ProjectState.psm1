@@ -64,7 +64,7 @@ function Get-AiRulesProjectState {
                 $null -ne $manifest.PSObject.Properties['topics'] -and
                 $null -ne $manifest.source -and
                 $null -ne $manifest.source.PSObject.Properties['revision'] -and
-                [string]$manifest.source.repository -eq 'ai-rules-hub'
+                -not [string]::IsNullOrWhiteSpace([string]$manifest.source.repository)
             )
             if ($null -ne $manifest.PSObject.Properties['profiles']) {
                 $profiles = @($manifest.profiles | ForEach-Object { [string]$_ })
