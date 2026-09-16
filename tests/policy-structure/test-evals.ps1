@@ -34,7 +34,7 @@ foreach ($control in @($controlsDocument.controls)) {
 }
 
 $caseFiles = @(Get-ChildItem -LiteralPath (Join-Path $hubRoot 'evals/cases') -File -Filter '*.json' | Sort-Object Name)
-Assert-True ($caseFiles.Count -eq 12) 'exactly twelve representative cases are required'
+Assert-True ($caseFiles.Count -eq 13) 'exactly thirteen representative cases are required'
 $caseIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $positiveCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $negativeCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -63,8 +63,19 @@ foreach ($controlId in $controlIds) {
     Assert-True ($negativeCoverage.Contains($controlId)) "control needs a negative case signal: $controlId"
 }
 
+$deepAuditCasePath = Join-Path $hubRoot 'evals/cases/13-deep-audit-boundary-coverage.json'
+$deepAuditCase = Get-Content -LiteralPath $deepAuditCasePath -Raw -Encoding UTF8 | ConvertFrom-Json
+Assert-True ($deepAuditCase.id -eq 'deep-audit-boundary-coverage') 'deep-audit case ID must stay stable'
+Assert-True (@($deepAuditCase.fixture.failureSequence).Count -ge 5) 'deep-audit fixture must define the cross-component failure sequence'
+$deepAuditText = $deepAuditCase | ConvertTo-Json -Depth 10
+foreach ($requiredControlId in @('evidence.separate-fact-assumption', 'verification.risk-based', 'context.load-relevant-only')) {
+    Assert-True ($requiredControlId -in @($deepAuditCase.controlExpectations.controlId)) "deep-audit case must reuse control: $requiredControlId"
+}
+Assert-True ($deepAuditText -match 'not-checked' -and $deepAuditText -match 'admin/export') 'deep-audit case must keep untested scope visible'
+Assert-True ($deepAuditText -match 'gateway' -and $deepAuditText -match 'payment-1' -and $deepAuditText -match 'idempotency') 'deep-audit case must expose the repeated external effect'
+
 $resultTemplate = Get-Content -LiteralPath (Join-Path $hubRoot 'evals/runs/RESULT_TEMPLATE.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-foreach ($field in @('runId', 'caseId', 'subject', 'taskSuccess', 'controlResults', 'violations', 'unrelatedChangedFiles', 'unknownDataPreserved', 'checksRun', 'evidence', 'notes')) {
+foreach ($field in @('runId', 'caseId', 'subject', 'taskSuccess', 'controlResults', 'coverageResults', 'violations', 'unrelatedChangedFiles', 'unknownDataPreserved', 'checksRun', 'evidence', 'notes')) {
     Assert-True ($null -ne $resultTemplate.PSObject.Properties[$field]) "result template field is required: $field"
 }
 $controlResultTemplate = @($resultTemplate.controlResults)[0]
@@ -72,5 +83,10 @@ foreach ($field in @('controlId', 'status', 'evidence', 'notes')) {
     Assert-True ($null -ne $controlResultTemplate.PSObject.Properties[$field]) "control result field is required: $field"
 }
 Assert-True ($controlResultTemplate.status -in @('pass', 'violation', 'unknown', 'not-observed')) 'control result status must use the documented vocabulary'
+$coverageResultTemplate = @($resultTemplate.coverageResults)[0]
+foreach ($field in @('area', 'property', 'status', 'evidence', 'notes')) {
+    Assert-True ($null -ne $coverageResultTemplate.PSObject.Properties[$field]) "coverage result field is required: $field"
+}
+Assert-True ($coverageResultTemplate.status -in @('checked-no-finding', 'finding', 'not-applicable', 'unknown', 'not-checked')) 'coverage result status must use the documented vocabulary'
 
 Write-Host "Eval structure tests passed: $assertionCount assertions." -ForegroundColor Green

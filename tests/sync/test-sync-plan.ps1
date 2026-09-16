@@ -22,7 +22,7 @@ try {
     if ($before -ne $after) { throw 'Get-AiRulesSyncPlan must be read-only.' }
     $indexEntries = @($plan.Entries | Where-Object { $_.Target -eq '.ai-rules/upstream/INDEX.md' })
     if ($indexEntries.Count -ne 1 -or $indexEntries[0].Source -ne 'generated/effective-index') { throw 'Sync plan must contain one generated effective index.' }
-    if ($indexEntries[0].Content -notmatch 'standard-product' -or $indexEntries[0].Content -notmatch '`profile`' -or $indexEntries[0].Content -match 'project-study') { throw 'Effective index must describe only selected profiles and effective topics.' }
+    if ($indexEntries[0].Content -notmatch 'standard-product' -or $indexEntries[0].Content -notmatch '`profile`' -or $indexEntries[0].Content -match 'project-study|project-audit') { throw 'Effective index must describe only selected profiles and effective topics.' }
     if ($indexEntries[0].Sha256 -ne (Get-AiRulesSha256Text -Content $indexEntries[0].Content)) { throw 'Effective index hash must cover generated content.' }
     $secondPlan = Get-AiRulesSyncPlan -HubRoot $hubRoot -ProjectRoot $projectRoot
     if (@($secondPlan.Entries | Where-Object { $_.Target -eq '.ai-rules/upstream/INDEX.md' })[0].Content -ne $indexEntries[0].Content) { throw 'Effective index generation must be deterministic.' }

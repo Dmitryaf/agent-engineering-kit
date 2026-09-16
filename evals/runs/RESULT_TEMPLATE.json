@@ -18,6 +18,15 @@
       "notes": []
     }
   ],
+  "coverageResults": [
+    {
+      "area": "<scope-unit>",
+      "property": "<checked-property>",
+      "status": "not-checked",
+      "evidence": [],
+      "notes": []
+    }
+  ],
   "violations": [],
   "unrelatedChangedFiles": [],
   "unknownDataPreserved": null,
