@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('audit', 'connect')]
+    [ValidateSet('audit', 'connect', 'deep-audit')]
     [string]$Name,
 
     [string]$ProjectRoot
@@ -20,6 +20,12 @@ switch ($Name) {
         }
         $promptPath = Join-Path $hubRoot 'workflows/PROJECT_CONNECT_PROMPT.md'
     }
+    'deep-audit' {
+        if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+            throw 'ProjectRoot is required for prompt deep-audit.'
+        }
+        $promptPath = Join-Path $hubRoot 'workflows/PROJECT_DEEP_AUDIT_PROMPT.md'
+    }
 }
 
 $promptDocument = Get-Content -LiteralPath $promptPath -Raw -Encoding UTF8
@@ -29,7 +35,7 @@ if (-not $promptMatch.Success) {
 }
 
 $prompt = $promptMatch.Groups['prompt'].Value.Trim()
-if ($Name -eq 'connect') {
+if ($Name -in @('connect', 'deep-audit')) {
     $resolvedProjectRoot = (Resolve-Path -LiteralPath $ProjectRoot).Path
     $cliPath = Join-Path $hubRoot 'ai-rules.ps1'
     $prompt = $prompt.Replace('{{PROJECT_ROOT}}', $resolvedProjectRoot).Replace('{{HUB_CLI_PATH}}', $cliPath)

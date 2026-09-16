@@ -17,7 +17,8 @@
 Готовые запросы находятся отдельно:
 
 - [`PROJECT_CONNECT_PROMPT.md`](../workflows/PROJECT_CONNECT_PROMPT.md) — подключение проекта;
-- [`PROJECT_AUDIT_PROMPT.md`](../workflows/PROJECT_AUDIT_PROMPT.md) — завершение подключения и первичная проверка.
+- [`PROJECT_AUDIT_PROMPT.md`](../workflows/PROJECT_AUDIT_PROMPT.md) — завершение подключения и первичная проверка;
+- [`PROJECT_DEEP_AUDIT_PROMPT.md`](../workflows/PROJECT_DEEP_AUDIT_PROMPT.md) — подключение и запуск глубокого аудита.
 
 После подключения общие правила находятся в `.ai-rules/upstream/`. Локальные `RULESET.md` и `PROJECT_RULES.md` остаются под управлением проекта.
 

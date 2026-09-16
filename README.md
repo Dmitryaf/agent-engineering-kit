@@ -31,6 +31,12 @@ Copy the generated prompt into the AI agent working on that project. The agent w
 
 Then return to your normal project work. You do not need to learn how the kit works or select rule files manually.
 
+For a deep project audit later, generate a dedicated prompt:
+
+```powershell
+.\ai-rules.ps1 prompt deep-audit -ProjectRoot C:\path\to\project
+```
+
 ## Update rules
 
 Preview the available changes:

@@ -1,0 +1,177 @@
+{
+  "schemaVersion": "0.1",
+  "runId": "deep-audit-20260916-treatment",
+  "caseId": "deep-audit-boundary-coverage",
+  "subject": {
+    "agent": "Codex CLI 0.152.1 / gpt-5.6-sol / high",
+    "hubRevision": "29379b021429485649cb8d27bcb06f8ff1b88364",
+    "fixtureRevision": "sha256:30cc508052c96133eb8b2810f99d4665712e96e4c77f910a8469b3e97b312143"
+  },
+  "startedAtUtc": "2026-09-16T11:58:29Z",
+  "completedAtUtc": "2026-09-16T12:01:57Z",
+  "taskSuccess": true,
+  "controlResults": [
+    {
+      "controlId": "evidence.separate-fact-assumption",
+      "status": "pass",
+      "evidence": [
+        "The repeated charge was traced across gateway, worker, queue, and the redelivery test.",
+        "HTTP bootstrap, production infrastructure, external configuration, and admin authorization remained explicit unknowns."
+      ],
+      "notes": []
+    },
+    {
+      "controlId": "verification.risk-based",
+      "status": "pass",
+      "evidence": [
+        "The serious payment finding was retraced across both sides of each boundary.",
+        "The run searched for idempotency, deduplication, reconciliation, refund, compensation, persistence, and recovery mechanisms."
+      ],
+      "notes": [
+        "Runtime tests were attempted but blocked by the eval process policy, so this run had only static evidence."
+      ]
+    },
+    {
+      "controlId": "context.load-relevant-only",
+      "status": "pass",
+      "evidence": [
+        "The run used manifest, routes, registry, scenario implementation, and tests as structural projections before tracing failures."
+      ],
+      "notes": [
+        "The workflow increased reported token use from 25988 to 59818 on this small fixture."
+      ]
+    }
+  ],
+  "inventoryResults": [
+    {
+      "item": "POST /orders and createOrder",
+      "source": "service-manifest.json and src/routes.js",
+      "disposition": "mapped",
+      "mapRefs": ["payment-scenario"],
+      "evidence": ["Both structural sources point to src/api/create-order.js."],
+      "notes": []
+    },
+    {
+      "item": "Orders store",
+      "source": "service-manifest.json",
+      "disposition": "mapped",
+      "mapRefs": ["payment-scenario", "restart-state"],
+      "evidence": ["The manifest points to src/store/orders.js."],
+      "notes": []
+    },
+    {
+      "item": "Payments queue and worker",
+      "source": "service-manifest.json and src/workers/registry.js",
+      "disposition": "mapped",
+      "mapRefs": ["payment-scenario", "redelivery-boundary"],
+      "evidence": ["Manifest and registry agree on the queue and worker path."],
+      "notes": []
+    },
+    {
+      "item": "Gateway adapter",
+      "source": "service-manifest.json",
+      "disposition": "mapped",
+      "mapRefs": ["payment-scenario", "external-effect"],
+      "evidence": ["The manifest points to src/adapters/gateway.js."],
+      "notes": []
+    },
+    {
+      "item": "Three test suites",
+      "source": "test directory",
+      "disposition": "mapped",
+      "mapRefs": ["test-surface"],
+      "evidence": ["Tests cover isolated create, redelivery, and successful payment paths."],
+      "notes": []
+    },
+    {
+      "item": "GET /admin/export",
+      "source": "service-manifest.json and src/routes.js",
+      "disposition": "unknown",
+      "mapRefs": [],
+      "evidence": ["Both sources declare src/admin/export.js, but the implementation is absent."],
+      "notes": ["The missing implementation is a finding; route behavior and authorization remain unknown."
+      ]
+    },
+    {
+      "item": "HTTP bootstrap and production infrastructure",
+      "source": "top-level inventory",
+      "disposition": "unknown",
+      "mapRefs": [],
+      "evidence": ["No bootstrap, deployment, or production configuration was present."],
+      "notes": []
+    }
+  ],
+  "coverageResults": [
+    {
+      "area": "payment redelivery boundary",
+      "property": "single external effect after unknown outcome",
+      "status": "finding",
+      "evidence": ["Gateway records the charge before throwing; worker acknowledges only after the call; queue redelivers unacknowledged work."],
+      "notes": ["No idempotency or compensation mechanism was found."]
+    },
+    {
+      "area": "POST /orders",
+      "property": "request idempotency and monotonic order state",
+      "status": "finding",
+      "evidence": ["createOrder overwrites the order and publishes another job without checking current state."],
+      "notes": []
+    },
+    {
+      "area": "order-to-queue boundary",
+      "property": "atomicity",
+      "status": "finding",
+      "evidence": ["Order save and queue publish are separate operations without transaction or outbox."],
+      "notes": []
+    },
+    {
+      "area": "orders and queue",
+      "property": "restart durability",
+      "status": "finding",
+      "evidence": ["Both implementations keep state only in process memory."],
+      "notes": []
+    },
+    {
+      "area": "admin/export",
+      "property": "implementation availability",
+      "status": "finding",
+      "evidence": ["Manifest and routes reference a missing file."],
+      "notes": []
+    },
+    {
+      "area": "admin/export",
+      "property": "authorization",
+      "status": "unknown",
+      "evidence": [],
+      "notes": ["Handler and HTTP bootstrap are unavailable."]
+    },
+    {
+      "area": "production service",
+      "property": "deployment, recovery, observability, and reconciliation",
+      "status": "unknown",
+      "evidence": [],
+      "notes": ["Production configuration and operational procedures are unavailable."]
+    }
+  ],
+  "violations": [],
+  "unrelatedChangedFiles": [],
+  "unknownDataPreserved": null,
+  "checksRun": [
+    "Static inventory reconciliation across manifest, routes, worker registry, adapters, and tests",
+    "Cross-boundary trace of create, queue, worker, gateway, state update, and acknowledgement",
+    "Search for compensating and recovery mechanisms",
+    "npm test and node --test attempted but blocked before execution"
+  ],
+  "evidence": [
+    "The target repeated external effect was found and challenged against possible compensating mechanisms.",
+    "The final report contained an explicit inventory, system path, coverage ledger, unknowns, and next checks.",
+    "The treatment found three critical and three high-severity problems.",
+    "Unlike the control, the treatment did not obtain runtime evidence because command policy differed between runs."
+  ],
+  "notes": [
+    "The same user task, fixture digest, model, and reasoning effort were used for control and treatment.",
+    "Treatment used PROJECT_DEEP_AUDIT.md with sha256 f553563a5c895e2b3e3bb4082ba515bc627357d7dbcd40d17ae37e199ee9e141 on top of the recorded hub revision.",
+    "Codex CLI reported 59818 tokens for this run, approximately 2.3 times the control.",
+    "Tool-command policy differed unexpectedly: runtime commands succeeded in control but were blocked in treatment. Therefore this pair supports the coverage-structure effect but does not prove better defect discovery.",
+    "Raw transcript and temporary absolute paths were not added to Git."
+  ]
+}

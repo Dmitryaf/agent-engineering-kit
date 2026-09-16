@@ -18,6 +18,16 @@
       "notes": []
     }
   ],
+  "inventoryResults": [
+    {
+      "item": "<inventory-item>",
+      "source": "<structural-source>",
+      "disposition": "unknown",
+      "mapRefs": [],
+      "evidence": [],
+      "notes": []
+    }
+  ],
   "coverageResults": [
     {
       "area": "<scope-unit>",

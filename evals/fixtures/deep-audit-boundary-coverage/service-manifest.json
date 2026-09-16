@@ -1,0 +1,18 @@
+{
+  "entryPoints": [
+    "src/api/create-order.js",
+    "src/admin/export.js"
+  ],
+  "workers": [
+    "src/workers/payment.js"
+  ],
+  "queues": [
+    "src/queue/leased-jobs.js"
+  ],
+  "stores": [
+    "src/store/orders.js"
+  ],
+  "externalAdapters": [
+    "src/adapters/gateway.js"
+  ]
+}

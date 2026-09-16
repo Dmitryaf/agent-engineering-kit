@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "0.1",
+  "runId": "deep-audit-20260916-control",
+  "caseId": "deep-audit-boundary-coverage",
+  "subject": {
+    "agent": "Codex CLI 0.152.1 / gpt-5.6-sol / high",
+    "hubRevision": "29379b021429485649cb8d27bcb06f8ff1b88364",
+    "fixtureRevision": "sha256:30cc508052c96133eb8b2810f99d4665712e96e4c77f910a8469b3e97b312143"
+  },
+  "startedAtUtc": "2026-09-16T11:54:44Z",
+  "completedAtUtc": "2026-09-16T11:58:11Z",
+  "taskSuccess": false,
+  "controlResults": [
+    {
+      "controlId": "evidence.separate-fact-assumption",
+      "status": "pass",
+      "evidence": [
+        "The duplicate charge was tied to payment.js, gateway.js, leased-jobs.js, and an observed charges 1 to 2 transition.",
+        "Missing HTTP, authorization, infrastructure, and production configuration were reported as unavailable rather than assumed safe."
+      ],
+      "notes": []
+    },
+    {
+      "controlId": "verification.risk-based",
+      "status": "pass",
+      "evidence": [
+        "A local failure probe exercised effect, lost response, restart, redelivery, and the second external effect.",
+        "The report searched for idempotency, reconciliation, compensation, persistence, and nearby failure tests."
+      ],
+      "notes": []
+    },
+    {
+      "controlId": "context.load-relevant-only",
+      "status": "pass",
+      "evidence": [
+        "The run inspected the complete small fixture: manifest, routes, worker registry, payment path, stores, adapter, and tests."
+      ],
+      "notes": [
+        "Reading every file was proportionate for this 13-file fixture and is not evidence that the same strategy scales."
+      ]
+    }
+  ],
+  "inventoryResults": [],
+  "coverageResults": [],
+  "violations": [
+    "No explicit audit contract was recorded before analysis.",
+    "No inventory-to-map reconciliation was produced.",
+    "No coverage ledger distinguished checked, unknown, and not-checked scope.",
+    "Unverified areas were listed in prose but were not connected to map or coverage identifiers."
+  ],
+  "unrelatedChangedFiles": [],
+  "unknownDataPreserved": null,
+  "checksRun": [
+    "npm test: 3 passed",
+    "Local duplicate-charge failure probe: charges increased from 1 to 2 after redelivery",
+    "Local partial-publish, duplicate-request, restart, stalled-lease, and unknown-order probes",
+    "JavaScript syntax checks",
+    "Node test coverage"
+  ],
+  "evidence": [
+    "The target repeated external effect was found and reproduced.",
+    "The missing admin/export implementation was found through routes and service-manifest.",
+    "The report contained six critical findings and one additional serious integrity finding.",
+    "The report did not contain an explicit system map, inventory dispositions, or coverage statuses."
+  ],
+  "notes": [
+    "The same user task and model settings were used for control and treatment.",
+    "Codex CLI reported 25988 tokens for this run.",
+    "Task success is false under the case contract despite finding the target defect because observable coverage was absent.",
+    "Raw transcript and temporary absolute paths were not added to Git."
+  ]
+}

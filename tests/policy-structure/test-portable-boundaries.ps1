@@ -10,7 +10,7 @@ $delivery = Get-Content -LiteralPath (Join-Path $hubRoot 'rules/GIT_AND_DELIVERY
 $learningProfile = Get-Content -LiteralPath (Join-Path $hubRoot 'profiles/learning-project.md') -Raw -Encoding UTF8
 $readme = Get-Content -LiteralPath (Join-Path $hubRoot 'README.md') -Raw -Encoding UTF8
 
-$workflowPaths = @('workflows/PROJECT_CONNECT_PROMPT.md', 'workflows/PROJECT_AUDIT_PROMPT.md', 'workflows/PROJECT_STUDY.md', 'workflows/PROJECT_DEEP_AUDIT.md')
+$workflowPaths = @('workflows/PROJECT_CONNECT_PROMPT.md', 'workflows/PROJECT_AUDIT_PROMPT.md', 'workflows/PROJECT_DEEP_AUDIT_PROMPT.md', 'workflows/PROJECT_STUDY.md', 'workflows/PROJECT_DEEP_AUDIT.md')
 foreach ($workflowPath in $workflowPaths) {
     if (-not (Test-Path -LiteralPath (Join-Path $hubRoot $workflowPath) -PathType Leaf)) { throw "Workflow is missing: $workflowPath" }
 }
@@ -28,4 +28,4 @@ if ($delivery -match 'установи `Husky`|установи.*commitlint') { 
 if ($learningProfile -notmatch 'устойчивой частью' -or $learningProfile -notmatch 'разового изучения') { throw 'Learning profile must describe a stable project property rather than a task workflow.' }
 if ($readme -match '## Detailed connection workflow|## Synchronization states|## Repository structure') { throw 'Public README must remain a short external entry point.' }
 
-Write-Host 'Portable boundary tests passed: 14 assertions.' -ForegroundColor Green
+Write-Host 'Portable boundary tests passed: 15 assertions.' -ForegroundColor Green
