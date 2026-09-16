@@ -1,11 +1,19 @@
 {
-  "schemaVersion": "0.1",
+  "schemaVersion": "0.2",
   "runId": "deep-audit-20260916-treatment",
   "caseId": "deep-audit-boundary-coverage",
   "subject": {
     "agent": "Codex CLI 0.152.1 / gpt-5.6-sol / high",
     "hubRevision": "29379b021429485649cb8d27bcb06f8ff1b88364",
-    "fixtureRevision": "sha256:30cc508052c96133eb8b2810f99d4665712e96e4c77f910a8469b3e97b312143"
+    "workflowRevision": "sha256:f553563a5c895e2b3e3bb4082ba515bc627357d7dbcd40d17ae37e199ee9e141",
+    "fixtureRevision": "sha256:30cc508052c96133eb8b2810f99d4665712e96e4c77f910a8469b3e97b312143",
+    "environment": {
+      "platform": "windows",
+      "runner": "local-codex-cli",
+      "workspaceAccess": "read-only",
+      "networkAccess": "unknown",
+      "shellCommands": "blocked"
+    }
   },
   "startedAtUtc": "2026-09-16T11:58:29Z",
   "completedAtUtc": "2026-09-16T12:01:57Z",
@@ -169,7 +177,6 @@
   ],
   "notes": [
     "The same user task, fixture digest, model, and reasoning effort were used for control and treatment.",
-    "Treatment used PROJECT_DEEP_AUDIT.md with sha256 f553563a5c895e2b3e3bb4082ba515bc627357d7dbcd40d17ae37e199ee9e141 on top of the recorded hub revision.",
     "Codex CLI reported 59818 tokens for this run, approximately 2.3 times the control.",
     "Tool-command policy differed unexpectedly: runtime commands succeeded in control but were blocked in treatment. Therefore this pair supports the coverage-structure effect but does not prove better defect discovery.",
     "Raw transcript and temporary absolute paths were not added to Git."

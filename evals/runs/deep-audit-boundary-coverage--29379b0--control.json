@@ -1,11 +1,19 @@
 {
-  "schemaVersion": "0.1",
+  "schemaVersion": "0.2",
   "runId": "deep-audit-20260916-control",
   "caseId": "deep-audit-boundary-coverage",
   "subject": {
     "agent": "Codex CLI 0.152.1 / gpt-5.6-sol / high",
     "hubRevision": "29379b021429485649cb8d27bcb06f8ff1b88364",
-    "fixtureRevision": "sha256:30cc508052c96133eb8b2810f99d4665712e96e4c77f910a8469b3e97b312143"
+    "workflowRevision": "none",
+    "fixtureRevision": "sha256:30cc508052c96133eb8b2810f99d4665712e96e4c77f910a8469b3e97b312143",
+    "environment": {
+      "platform": "windows",
+      "runner": "local-codex-cli",
+      "workspaceAccess": "read-only",
+      "networkAccess": "unknown",
+      "shellCommands": "allowed"
+    }
   },
   "startedAtUtc": "2026-09-16T11:54:44Z",
   "completedAtUtc": "2026-09-16T11:58:11Z",

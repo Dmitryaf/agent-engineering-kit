@@ -1,11 +1,19 @@
 {
-  "schemaVersion": "0.1",
+  "schemaVersion": "0.2",
   "runId": "<run-id>",
   "caseId": "<case-id>",
   "subject": {
     "agent": "<agent-and-model>",
     "hubRevision": "<full-commit-sha>",
-    "fixtureRevision": "<fixture-id-or-sha>"
+    "workflowRevision": "<sha256-or-none>",
+    "fixtureRevision": "<fixture-id-or-sha>",
+    "environment": {
+      "platform": "<platform>",
+      "runner": "<runner>",
+      "workspaceAccess": "<read-only-workspace-write-or-full>",
+      "networkAccess": "<blocked-restricted-allowed-or-unknown>",
+      "shellCommands": "<blocked-allowed-mixed-or-unknown>"
+    }
   },
   "startedAtUtc": null,
   "completedAtUtc": null,

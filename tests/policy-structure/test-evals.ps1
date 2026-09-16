@@ -81,8 +81,15 @@ Assert-True ($deepAuditText -match 'not-checked' -and $deepAuditText -match 'adm
 Assert-True ($deepAuditText -match 'gateway' -and $deepAuditText -match 'payment-1' -and $deepAuditText -match 'idempotency') 'deep-audit case must expose the repeated external effect'
 
 $resultTemplate = Get-Content -LiteralPath (Join-Path $hubRoot 'evals/runs/RESULT_TEMPLATE.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+Assert-True ($resultTemplate.schemaVersion -eq '0.2') 'result template schema version must be 0.2'
 foreach ($field in @('runId', 'caseId', 'subject', 'taskSuccess', 'controlResults', 'inventoryResults', 'coverageResults', 'violations', 'unrelatedChangedFiles', 'unknownDataPreserved', 'checksRun', 'evidence', 'notes')) {
     Assert-True ($null -ne $resultTemplate.PSObject.Properties[$field]) "result template field is required: $field"
+}
+foreach ($field in @('agent', 'hubRevision', 'workflowRevision', 'fixtureRevision', 'environment')) {
+    Assert-True ($null -ne $resultTemplate.subject.PSObject.Properties[$field]) "result subject field is required: $field"
+}
+foreach ($field in @('platform', 'runner', 'workspaceAccess', 'networkAccess', 'shellCommands')) {
+    Assert-True ($null -ne $resultTemplate.subject.environment.PSObject.Properties[$field]) "result environment field is required: $field"
 }
 $controlResultTemplate = @($resultTemplate.controlResults)[0]
 foreach ($field in @('controlId', 'status', 'evidence', 'notes')) {
@@ -101,14 +108,21 @@ foreach ($field in @('area', 'property', 'status', 'evidence', 'notes')) {
 Assert-True ($coverageResultTemplate.status -in @('checked-no-finding', 'finding', 'not-applicable', 'unknown', 'not-checked')) 'coverage result status must use the documented vocabulary'
 
 $storedRunFiles = @(Get-ChildItem -LiteralPath (Join-Path $hubRoot 'evals/runs') -File -Filter '*.json' | Where-Object { $_.Name -ne 'RESULT_TEMPLATE.json' })
-Assert-True ($storedRunFiles.Count -ge 2) 'at least one comparable pair of observed eval runs is required'
+Assert-True ($storedRunFiles.Count -ge 2) 'at least one observed eval run pair is required'
 foreach ($runFile in $storedRunFiles) {
     $runText = Get-Content -LiteralPath $runFile.FullName -Raw -Encoding UTF8
     $run = $runText | ConvertFrom-Json
-    Assert-True ($run.schemaVersion -eq '0.1') "stored run schema version must be 0.1: $($runFile.Name)"
+    Assert-True ($run.schemaVersion -eq '0.2') "stored run schema version must be 0.2: $($runFile.Name)"
     Assert-True ($caseIds.Contains([string]$run.caseId)) "stored run must reference a known case: $($runFile.Name)"
+    Assert-True (-not [string]::IsNullOrWhiteSpace([string]$run.subject.agent)) "stored run must identify its agent: $($runFile.Name)"
     Assert-True ([string]$run.subject.hubRevision -match '^[0-9a-f]{40}$') "stored run must identify a full hub revision: $($runFile.Name)"
+    Assert-True ([string]$run.subject.workflowRevision -match '^(none|sha256:[0-9a-f]{64})$') "stored run must identify an exact workflow revision or none: $($runFile.Name)"
     Assert-True (-not [string]::IsNullOrWhiteSpace([string]$run.subject.fixtureRevision)) "stored run must identify its fixture: $($runFile.Name)"
+    Assert-True (-not [string]::IsNullOrWhiteSpace([string]$run.subject.environment.platform)) "stored run must identify its platform: $($runFile.Name)"
+    Assert-True (-not [string]::IsNullOrWhiteSpace([string]$run.subject.environment.runner)) "stored run must identify its runner: $($runFile.Name)"
+    Assert-True ([string]$run.subject.environment.workspaceAccess -in @('read-only', 'workspace-write', 'full')) "stored run has an invalid workspace access value: $($runFile.Name)"
+    Assert-True ([string]$run.subject.environment.networkAccess -in @('blocked', 'restricted', 'allowed', 'unknown')) "stored run has an invalid network access value: $($runFile.Name)"
+    Assert-True ([string]$run.subject.environment.shellCommands -in @('blocked', 'allowed', 'mixed', 'unknown')) "stored run has an invalid shell command value: $($runFile.Name)"
     Assert-True ($run.taskSuccess -is [bool]) "stored run taskSuccess must be boolean: $($runFile.Name)"
     foreach ($controlResult in @($run.controlResults)) {
         Assert-True ([string]$controlResult.controlId -in $controlIds) "stored run references an unknown control: $($runFile.Name)"
@@ -122,5 +136,12 @@ foreach ($runFile in $storedRunFiles) {
     }
     Assert-True ($runText -notmatch '(?i)[a-z]:\\users\\|/users/') "stored run must not contain a local user path: $($runFile.Name)"
 }
+
+$deepAuditRuns = @($storedRunFiles | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw -Encoding UTF8 | ConvertFrom-Json } | Where-Object { $_.caseId -eq 'deep-audit-boundary-coverage' })
+$deepAuditControl = @($deepAuditRuns | Where-Object { $_.runId -eq 'deep-audit-20260916-control' })[0]
+$deepAuditTreatment = @($deepAuditRuns | Where-Object { $_.runId -eq 'deep-audit-20260916-treatment' })[0]
+Assert-True ($deepAuditControl.subject.workflowRevision -eq 'none') 'deep-audit control must explicitly record that no workflow was used'
+Assert-True ($deepAuditTreatment.subject.workflowRevision -match '^sha256:[0-9a-f]{64}$') 'deep-audit treatment must record the workflow content digest'
+Assert-True ($deepAuditControl.subject.environment.shellCommands -ne $deepAuditTreatment.subject.environment.shellCommands) 'deep-audit pair must expose the observed shell-command confound structurally'
 
 Write-Host "Eval structure tests passed: $assertionCount assertions." -ForegroundColor Green
