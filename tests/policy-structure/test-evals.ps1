@@ -34,7 +34,7 @@ foreach ($control in @($controlsDocument.controls)) {
 }
 
 $caseFiles = @(Get-ChildItem -LiteralPath (Join-Path $hubRoot 'evals/cases') -File -Filter '*.json' | Sort-Object Name)
-Assert-True ($caseFiles.Count -eq 13) 'exactly thirteen representative cases are required'
+Assert-True ($caseFiles.Count -eq 14) 'exactly fourteen representative cases are required'
 $caseIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $positiveCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $negativeCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -79,6 +79,16 @@ foreach ($requiredControlId in @('evidence.separate-fact-assumption', 'verificat
 }
 Assert-True ($deepAuditText -match 'not-checked' -and $deepAuditText -match 'admin/export') 'deep-audit case must keep untested scope visible'
 Assert-True ($deepAuditText -match 'gateway' -and $deepAuditText -match 'payment-1' -and $deepAuditText -match 'idempotency') 'deep-audit case must expose the repeated external effect'
+
+$successiveAuditCasePath = Join-Path $hubRoot 'evals/cases/14-successive-audit-fixture-provenance.json'
+$successiveAuditCase = Get-Content -LiteralPath $successiveAuditCasePath -Raw -Encoding UTF8 | ConvertFrom-Json
+Assert-True ($successiveAuditCase.id -eq 'successive-audit-fixture-provenance') 'successive-audit case ID must stay stable'
+$successiveAuditText = $successiveAuditCase | ConvertTo-Json -Depth 10
+Assert-True ($successiveAuditText -match 'previous-register' -and $successiveAuditText -match 'unknown' -and $successiveAuditText -match 'not-checked') 'successive-audit case must preserve prior coverage limits'
+Assert-True ($successiveAuditText -match 'adjacent-event' -and $successiveAuditText -match 'official-schema' -and $successiveAuditText -match 'observed-event') 'successive-audit case must expose fixture provenance'
+foreach ($requiredControlId in @('evidence.separate-fact-assumption', 'verification.risk-based', 'context.load-relevant-only')) {
+    Assert-True ($requiredControlId -in @($successiveAuditCase.controlExpectations.controlId)) "successive-audit case must reuse control: $requiredControlId"
+}
 
 $resultTemplate = Get-Content -LiteralPath (Join-Path $hubRoot 'evals/runs/RESULT_TEMPLATE.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 Assert-True ($resultTemplate.schemaVersion -eq '0.2') 'result template schema version must be 0.2'
