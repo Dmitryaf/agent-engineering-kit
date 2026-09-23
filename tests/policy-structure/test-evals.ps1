@@ -34,7 +34,7 @@ foreach ($control in @($controlsDocument.controls)) {
 }
 
 $caseFiles = @(Get-ChildItem -LiteralPath (Join-Path $hubRoot 'evals/cases') -File -Filter '*.json' | Sort-Object Name)
-Assert-True ($caseFiles.Count -eq 14) 'exactly fourteen representative cases are required'
+Assert-True ($caseFiles.Count -eq 15) 'exactly fifteen representative cases are required'
 $caseIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $positiveCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $negativeCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -88,6 +88,17 @@ Assert-True ($successiveAuditText -match 'previous-register' -and $successiveAud
 Assert-True ($successiveAuditText -match 'adjacent-event' -and $successiveAuditText -match 'official-schema' -and $successiveAuditText -match 'observed-event') 'successive-audit case must expose fixture provenance'
 foreach ($requiredControlId in @('evidence.separate-fact-assumption', 'verification.risk-based', 'context.load-relevant-only')) {
     Assert-True ($requiredControlId -in @($successiveAuditCase.controlExpectations.controlId)) "successive-audit case must reuse control: $requiredControlId"
+}
+
+$protectedPromotionCasePath = Join-Path $hubRoot 'evals/cases/15-protected-branch-ci-promotion.json'
+$protectedPromotionCase = Get-Content -LiteralPath $protectedPromotionCasePath -Raw -Encoding UTF8 | ConvertFrom-Json
+Assert-True ($protectedPromotionCase.id -eq 'protected-branch-ci-promotion') 'protected-promotion case ID must stay stable'
+$protectedPromotionText = $protectedPromotionCase | ConvertTo-Json -Depth 10
+Assert-True ($protectedPromotionText -match 'task' -and $protectedPromotionText -match 'branch Preview' -and $protectedPromotionText -match 'develop') 'protected-promotion case must isolate diagnostic work from the integration branch'
+Assert-True ($protectedPromotionText -match 'source commit' -and $protectedPromotionText -match 'staging' -and $protectedPromotionText -match 'pending') 'protected-promotion case must gate the persistent environment on the exact candidate'
+Assert-True ($protectedPromotionText -match 'CI job' -and $protectedPromotionText -match 'timeout' -and $protectedPromotionText -match 'retry') 'protected-promotion case must stop serial timeout patches after a repeated failure class'
+foreach ($requiredControlId in @('scope.no-unrelated-changes', 'owner.explicit-apply', 'evidence.separate-fact-assumption', 'verification.risk-based')) {
+    Assert-True ($requiredControlId -in @($protectedPromotionCase.controlExpectations.controlId)) "protected-promotion case must reuse control: $requiredControlId"
 }
 
 $resultTemplate = Get-Content -LiteralPath (Join-Path $hubRoot 'evals/runs/RESULT_TEMPLATE.json') -Raw -Encoding UTF8 | ConvertFrom-Json
