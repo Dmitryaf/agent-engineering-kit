@@ -14,7 +14,7 @@
 | [`QUALITY.md`](QUALITY.md) | до реализации для выбора приёмки; проверка и передача изменения |
 | [`RELIABILITY_AND_OPERATIONS.md`](RELIABILITY_AND_OPERATIONS.md) | эксплуатация сервиса, деградация, восстановление либо риск производительности или предельной нагрузки |
 | [`SECURITY_AND_PRIVACY.md`](SECURITY_AND_PRIVACY.md) | секреты, пользователи, личные данные, AI с инструментами, внешние сервисы, публикация |
-| [`DOCUMENTATION.md`](DOCUMENTATION.md) | создание или изменение документации и рабочего контекста |
+| [`DOCUMENTATION.md`](DOCUMENTATION.md) | значимый выбор или пересмотр решения; создание или изменение документации и рабочего контекста |
 | [`GIT_AND_DELIVERY.md`](GIT_AND_DELIVERY.md) | ветки, коммиты, CI/CD, релиз или внешняя операция |
 | [`AI_COLLABORATION.md`](AI_COLLABORATION.md) | распределение работы между человеком и AI, менторский режим |
 | [`RESEARCH_AND_EVIDENCE.md`](RESEARCH_AND_EVIDENCE.md) | неизвестный API, исследование, эксперимент, аудит или доказательная рекомендация |

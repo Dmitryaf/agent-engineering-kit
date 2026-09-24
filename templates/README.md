@@ -30,6 +30,7 @@
 - [`PRODUCT.md`](PRODUCT.md) — описание продукта;
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — описание архитектуры;
 - [`DECISION.md`](DECISION.md) — отдельное значимое решение;
+- [`DECISIONS.md`](DECISIONS.md) — карта значимых решений, если у проекта ещё нет подходящего указателя;
 - [`RESEARCH.md`](RESEARCH.md) — проверяемое исследование;
 - [`PROJECT_KNOWLEDGE.md`](PROJECT_KNOWLEDGE.md) — устойчивые знания о проекте;
 - [`SESSION_CONTEXT.md`](SESSION_CONTEXT.md) — временная передача контекста.

@@ -37,6 +37,8 @@ For a deep project audit later, generate a dedicated prompt:
 .\ai-rules.ps1 prompt deep-audit -ProjectRoot C:\path\to\project
 ```
 
+Significant decisions are maintained as a regular project practice, with a map linking to their rationale and implementation evidence.
+
 ## Update rules
 
 Preview the available changes:

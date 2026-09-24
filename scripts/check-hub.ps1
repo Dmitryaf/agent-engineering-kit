@@ -33,6 +33,7 @@ $requiredPaths = @(
     'workflows/PROJECT_AUDIT_PROMPT.md',
     'workflows/PROJECT_DEEP_AUDIT_PROMPT.md',
     'workflows/PROJECT_STUDY.md',
+    'templates/DECISIONS.md',
     'workflows/PROJECT_DEEP_AUDIT.md',
     'evals/README.md',
     'evals/controls.json',
