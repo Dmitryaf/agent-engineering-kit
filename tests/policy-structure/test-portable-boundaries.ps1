@@ -11,7 +11,7 @@ $quality = Get-Content -LiteralPath (Join-Path $hubRoot 'rules/QUALITY.md') -Raw
 $learningProfile = Get-Content -LiteralPath (Join-Path $hubRoot 'profiles/learning-project.md') -Raw -Encoding UTF8
 $readme = Get-Content -LiteralPath (Join-Path $hubRoot 'README.md') -Raw -Encoding UTF8
 
-$workflowPaths = @('workflows/PROJECT_CONNECT_PROMPT.md', 'workflows/PROJECT_AUDIT_PROMPT.md', 'workflows/PROJECT_DEEP_AUDIT_PROMPT.md', 'workflows/PROJECT_STUDY.md', 'workflows/PROJECT_DEEP_AUDIT.md')
+$workflowPaths = @('workflows/PROJECT_CONNECT_PROMPT.md', 'workflows/PROJECT_AUDIT_PROMPT.md', 'workflows/PROJECT_DEEP_AUDIT_PROMPT.md', 'workflows/PROJECT_STUDY_PROMPT.md', 'workflows/PROJECT_STUDY.md', 'workflows/PROJECT_DEEP_AUDIT.md')
 foreach ($workflowPath in $workflowPaths) {
     if (-not (Test-Path -LiteralPath (Join-Path $hubRoot $workflowPath) -PathType Leaf)) { throw "Workflow is missing: $workflowPath" }
 }

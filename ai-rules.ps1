@@ -61,6 +61,8 @@ Agent Engineering Kit
   prompt audit             Подготовить запрос для проверки подключения.
   prompt deep-audit -ProjectRoot ПУТЬ
                            Подготовить запрос для глубокого аудита.
+  prompt study -ProjectRoot ПУТЬ
+                           Подготовить запрос для изучения проекта.
   connect -ProjectRoot ПУТЬ
                            Подготовить проект и показать изменения.
   connect -ProjectRoot ПУТЬ -Apply
@@ -727,12 +729,12 @@ try {
             }
         }
         'prompt' {
-            if ([string]::IsNullOrWhiteSpace($ListTarget) -or $ListTarget.ToLowerInvariant() -notin @('audit', 'connect', 'deep-audit')) {
-                throw "Для команды 'prompt' укажите 'connect', 'audit' или 'deep-audit'."
+            if ([string]::IsNullOrWhiteSpace($ListTarget) -or $ListTarget.ToLowerInvariant() -notin @('audit', 'connect', 'deep-audit', 'study')) {
+                throw "Для команды 'prompt' укажите 'connect', 'audit', 'deep-audit' или 'study'."
             }
             $promptName = $ListTarget.ToLowerInvariant()
             $promptArguments = @('-Name', $promptName)
-            if ($promptName -in @('connect', 'deep-audit')) {
+            if ($promptName -in @('connect', 'deep-audit', 'study')) {
                 $resolvedProjectRoot = Resolve-ProjectRoot -Path $ProjectRoot
                 $promptArguments += @('-ProjectRoot', $resolvedProjectRoot)
             }

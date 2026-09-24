@@ -72,8 +72,8 @@
     "project-study": {
       "file": "workflows/PROJECT_STUDY.md",
       "kind": "workflow",
-      "description": "Рабочий процесс создания учебной документации по существующему проекту.",
-      "readWhen": "Только при явном выборе project-study и задаче на учебную документацию по проекту."
+      "description": "Рабочий процесс изучения проекта с проверкой самостоятельного понимания владельца.",
+      "readWhen": "Только при явном выборе project-study и задаче на изучение проекта или учебную документацию."
     },
     "project-audit": {
       "file": "workflows/PROJECT_DEEP_AUDIT.md",

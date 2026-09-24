@@ -18,7 +18,8 @@
 
 - [`PROJECT_CONNECT_PROMPT.md`](../workflows/PROJECT_CONNECT_PROMPT.md) — подключение проекта;
 - [`PROJECT_AUDIT_PROMPT.md`](../workflows/PROJECT_AUDIT_PROMPT.md) — завершение подключения и первичная проверка;
-- [`PROJECT_DEEP_AUDIT_PROMPT.md`](../workflows/PROJECT_DEEP_AUDIT_PROMPT.md) — подключение и запуск глубокого аудита.
+- [`PROJECT_DEEP_AUDIT_PROMPT.md`](../workflows/PROJECT_DEEP_AUDIT_PROMPT.md) — подключение и запуск глубокого аудита;
+- [`PROJECT_STUDY_PROMPT.md`](../workflows/PROJECT_STUDY_PROMPT.md) — подключение и начало изучения проекта через `ai-rules.ps1 prompt study -ProjectRoot <путь>`.
 
 После подключения общие правила находятся в `.ai-rules/upstream/`. Локальные `RULESET.md` и `PROJECT_RULES.md` остаются под управлением проекта.
 

@@ -37,7 +37,13 @@ For a deep project audit later, generate a dedicated prompt:
 .\ai-rules.ps1 prompt deep-audit -ProjectRoot C:\path\to\project
 ```
 
-Significant decisions are maintained as a regular project practice, with a map linking to their rationale and implementation evidence.
+To learn how a project works through code walkthroughs and practical checks:
+
+```powershell
+.\ai-rules.ps1 prompt study -ProjectRoot C:\path\to\project
+```
+
+Study sessions track explored areas and demonstrated understanding separately. Significant decisions are maintained as a regular project practice, with a map linking to their rationale and implementation evidence.
 
 ## Update rules
 
