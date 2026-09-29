@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('audit', 'connect', 'deep-audit', 'study')]
+    [ValidateSet('audit', 'connect', 'deep-audit', 'study', 'parallel')]
     [string]$Name,
 
     [string]$ProjectRoot
@@ -32,6 +32,12 @@ switch ($Name) {
         }
         $promptPath = Join-Path $hubRoot 'workflows/PROJECT_STUDY_PROMPT.md'
     }
+    'parallel' {
+        if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+            throw 'ProjectRoot is required for prompt parallel.'
+        }
+        $promptPath = Join-Path $hubRoot 'workflows/PARALLEL_DELIVERY_PROMPT.md'
+    }
 }
 
 $promptDocument = Get-Content -LiteralPath $promptPath -Raw -Encoding UTF8
@@ -41,10 +47,14 @@ if (-not $promptMatch.Success) {
 }
 
 $prompt = $promptMatch.Groups['prompt'].Value.Trim()
-if ($Name -in @('connect', 'deep-audit', 'study')) {
+if ($Name -in @('connect', 'deep-audit', 'study', 'parallel')) {
     $resolvedProjectRoot = (Resolve-Path -LiteralPath $ProjectRoot).Path
     $cliPath = Join-Path $hubRoot 'ai-rules.ps1'
     $prompt = $prompt.Replace('{{PROJECT_ROOT}}', $resolvedProjectRoot).Replace('{{HUB_CLI_PATH}}', $cliPath)
+    if ($Name -eq 'parallel') {
+        $taskContractPath = Join-Path $hubRoot 'templates/TASK_CONTRACT.md'
+        $prompt = $prompt.Replace('{{TASK_CONTRACT_PATH}}', $taskContractPath)
+    }
 }
 
 Write-Output $prompt

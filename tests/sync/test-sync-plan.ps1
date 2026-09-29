@@ -22,16 +22,25 @@ try {
     if ($before -ne $after) { throw 'Get-AiRulesSyncPlan must be read-only.' }
     $indexEntries = @($plan.Entries | Where-Object { $_.Target -eq '.ai-rules/upstream/INDEX.md' })
     if ($indexEntries.Count -ne 1 -or $indexEntries[0].Source -ne 'generated/effective-index') { throw 'Sync plan must contain one generated effective index.' }
-    if ($indexEntries[0].Content -notmatch 'standard-product' -or $indexEntries[0].Content -notmatch '`profile`' -or $indexEntries[0].Content -match 'project-study|project-audit') { throw 'Effective index must describe only selected profiles and effective topics.' }
+    if ($indexEntries[0].Content -notmatch 'standard-product' -or $indexEntries[0].Content -notmatch '`profile`' -or $indexEntries[0].Content -match 'project-study|project-audit|parallel-delivery') { throw 'Effective index must describe only selected profiles and effective topics.' }
+    if (@($plan.Entries | Where-Object { $_.Target -eq '.ai-rules/upstream/workflows/PARALLEL_DELIVERY.md' }).Count -ne 0) { throw 'Unselected parallel workflow must not enter the sync plan.' }
     if ($indexEntries[0].Sha256 -ne (Get-AiRulesSha256Text -Content $indexEntries[0].Content)) { throw 'Effective index hash must cover generated content.' }
     $secondPlan = Get-AiRulesSyncPlan -HubRoot $hubRoot -ProjectRoot $projectRoot
     if (@($secondPlan.Entries | Where-Object { $_.Target -eq '.ai-rules/upstream/INDEX.md' })[0].Content -ne $indexEntries[0].Content) { throw 'Effective index generation must be deterministic.' }
+    $parallelProjectRoot = Join-Path $projectRoot 'parallel project'
+    New-Item -ItemType Directory -Path $parallelProjectRoot | Out-Null
+    & $powershellExe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $hubRoot 'scripts/init-project-sync.ps1') -ProjectRoot $parallelProjectRoot -Topics parallel-delivery
+    if ($LASTEXITCODE -ne 0) { throw 'Explicit parallel workflow fixture initialization failed.' }
+    $parallelPlan = Get-AiRulesSyncPlan -HubRoot $hubRoot -ProjectRoot $parallelProjectRoot
+    $parallelWorkflowEntries = @($parallelPlan.Entries | Where-Object { $_.Target -eq '.ai-rules/upstream/workflows/PARALLEL_DELIVERY.md' })
+    $parallelIndexEntries = @($parallelPlan.Entries | Where-Object { $_.Target -eq '.ai-rules/upstream/INDEX.md' })
+    if ($parallelWorkflowEntries.Count -ne 1 -or $parallelIndexEntries.Count -ne 1 -or $parallelIndexEntries[0].Content -notmatch '### `parallel-delivery`' -or $parallelIndexEntries[0].Content -notmatch '`workflow`') { throw 'Explicit parallel selection must add its workflow and route it in the effective index.' }
     $expectedPathComparison = if ([System.IO.Path]::DirectorySeparatorChar -eq [char]'\') { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
     if ((Get-AiRulesPathComparison) -ne $expectedPathComparison) { throw 'Path comparison must follow the current filesystem platform.' }
     $caseBoundaryAccepted = $true
     try { [void](Get-AiRulesSafePath -BasePath (Join-Path $projectRoot 'CaseBase') -ChildPath '../casebase/escape.md' -Label 'case boundary') } catch { $caseBoundaryAccepted = $false }
     if (($env:OS -eq 'Windows_NT') -ne $caseBoundaryAccepted) { throw 'Path containment must follow filesystem case sensitivity.' }
-    Write-Host 'Sync plan tests passed: 9 assertions.' -ForegroundColor Green
+    Write-Host 'Sync plan tests passed: 11 assertions.' -ForegroundColor Green
 }
 finally {
     if (Test-Path -LiteralPath $projectRoot) { Remove-Item -LiteralPath $projectRoot -Recurse -Force }
