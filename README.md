@@ -45,6 +45,14 @@ To learn how a project works through code walkthroughs and practical checks:
 
 Study sessions track explored areas and demonstrated understanding separately. Significant decisions are maintained as a regular project practice, with a map linking to their rationale and implementation evidence.
 
+For a large task with independent parts, generate a prompt for Codex:
+
+```powershell
+.\ai-rules.ps1 prompt parallel -ProjectRoot C:\path\to\project
+```
+
+Paste the prompt and your task into Codex. It will assess whether parallel work helps, give each writer a bounded task and separate workspace, and assign one owner to integrate and verify the result. Ordinary tasks continue as before.
+
 ## Update rules
 
 Preview the available changes:

@@ -20,6 +20,7 @@
 - [`PROJECT_AUDIT_PROMPT.md`](../workflows/PROJECT_AUDIT_PROMPT.md) — завершение подключения и первичная проверка;
 - [`PROJECT_DEEP_AUDIT_PROMPT.md`](../workflows/PROJECT_DEEP_AUDIT_PROMPT.md) — подключение и запуск глубокого аудита;
 - [`PROJECT_STUDY_PROMPT.md`](../workflows/PROJECT_STUDY_PROMPT.md) — подключение и начало изучения проекта через `ai-rules.ps1 prompt study -ProjectRoot <путь>`.
+- [`PARALLEL_DELIVERY_PROMPT.md`](../workflows/PARALLEL_DELIVERY_PROMPT.md) — оценка и запуск параллельной задачи через `ai-rules.ps1 prompt parallel -ProjectRoot <путь>`.
 
 После подключения общие правила находятся в `.ai-rules/upstream/`. Локальные `RULESET.md` и `PROJECT_RULES.md` остаются под управлением проекта.
 
@@ -35,6 +36,7 @@
 - [`RESEARCH.md`](RESEARCH.md) — проверяемое исследование;
 - [`PROJECT_KNOWLEDGE.md`](PROJECT_KNOWLEDGE.md) — устойчивые знания о проекте;
 - [`SESSION_CONTEXT.md`](SESSION_CONTEXT.md) — временная передача контекста.
+- [`TASK_CONTRACT.md`](TASK_CONTRACT.md) — границы и приёмка одной параллельной подзадачи.
 
 Не создавайте документ только потому, что существует шаблон. Сначала определите читателя, задачу документа и место хранения.
 
