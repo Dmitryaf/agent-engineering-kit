@@ -34,7 +34,7 @@ foreach ($control in @($controlsDocument.controls)) {
 }
 
 $caseFiles = @(Get-ChildItem -LiteralPath (Join-Path $hubRoot 'evals/cases') -File -Filter '*.json' | Sort-Object Name)
-Assert-True ($caseFiles.Count -eq 19) 'exactly nineteen representative cases are required'
+Assert-True ($caseFiles.Count -eq 20) 'exactly twenty representative cases are required'
 $caseIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $positiveCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $negativeCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -99,6 +99,16 @@ Assert-True ($protectedPromotionText -match 'source commit' -and $protectedPromo
 Assert-True ($protectedPromotionText -match 'CI job' -and $protectedPromotionText -match 'timeout' -and $protectedPromotionText -match 'retry') 'protected-promotion case must stop serial timeout patches after a repeated failure class'
 foreach ($requiredControlId in @('scope.no-unrelated-changes', 'owner.explicit-apply', 'evidence.separate-fact-assumption', 'verification.risk-based')) {
     Assert-True ($requiredControlId -in @($protectedPromotionCase.controlExpectations.controlId)) "protected-promotion case must reuse control: $requiredControlId"
+}
+
+$studyLifecycleCasePath = Join-Path $hubRoot 'evals/cases/20-project-study-document-lifecycle.json'
+$studyLifecycleCase = Get-Content -LiteralPath $studyLifecycleCasePath -Raw -Encoding UTF8 | ConvertFrom-Json
+Assert-True ($studyLifecycleCase.id -eq 'project-study-document-lifecycle') 'project-study lifecycle case ID must stay stable'
+$studyLifecycleText = $studyLifecycleCase | ConvertTo-Json -Depth 10
+Assert-True (@($studyLifecycleCase.expectedChecks).Count -ge 8 -and @($studyLifecycleCase.prohibitedActions).Count -ge 6) 'project-study lifecycle case must cover both desired and prohibited document changes'
+Assert-True ($studyLifecycleText -match 'SHA' -and $studyLifecycleText -match 'evidence' -and $studyLifecycleText -match 'failure branches') 'project-study lifecycle case must include slice evidence and failure semantics'
+foreach ($requiredControlId in @('scope.no-unrelated-changes', 'evidence.separate-fact-assumption', 'context.load-relevant-only')) {
+    Assert-True ($requiredControlId -in @($studyLifecycleCase.controlExpectations.controlId)) "project-study lifecycle case must reuse control: $requiredControlId"
 }
 
 $resultTemplate = Get-Content -LiteralPath (Join-Path $hubRoot 'evals/runs/RESULT_TEMPLATE.json') -Raw -Encoding UTF8 | ConvertFrom-Json
