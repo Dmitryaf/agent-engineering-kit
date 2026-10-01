@@ -17,6 +17,7 @@
 Готовые запросы находятся отдельно:
 
 - [`PROJECT_CONNECT_PROMPT.md`](../workflows/PROJECT_CONNECT_PROMPT.md) — подключение проекта;
+- [`PROJECT_BOOTSTRAP.md`](../workflows/PROJECT_BOOTSTRAP.md) — первоначальная архитектура и архетипы через `ai-rules.ps1 prompt bootstrap -ProjectRoot <путь>`; отдельный файл архитектуры не обязателен.
 - [`PROJECT_AUDIT_PROMPT.md`](../workflows/PROJECT_AUDIT_PROMPT.md) — завершение подключения и первичная проверка;
 - [`PROJECT_DEEP_AUDIT_PROMPT.md`](../workflows/PROJECT_DEEP_AUDIT_PROMPT.md) — подключение и запуск глубокого аудита;
 - [`PROJECT_STUDY_PROMPT.md`](../workflows/PROJECT_STUDY_PROMPT.md) — подключение и начало изучения проекта через `ai-rules.ps1 prompt study -ProjectRoot <путь>`.

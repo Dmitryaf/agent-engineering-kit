@@ -65,6 +65,8 @@ Agent Engineering Kit
                            Подготовить запрос для изучения проекта.
   prompt parallel -ProjectRoot ПУТЬ
                            Подготовить запрос для параллельной задачи.
+  prompt bootstrap -ProjectRoot ПУТЬ
+                           Выбрать первоначальную архитектуру нового проекта.
   connect -ProjectRoot ПУТЬ
                            Подготовить проект и показать изменения.
   connect -ProjectRoot ПУТЬ -Apply
@@ -731,12 +733,12 @@ try {
             }
         }
         'prompt' {
-            if ([string]::IsNullOrWhiteSpace($ListTarget) -or $ListTarget.ToLowerInvariant() -notin @('audit', 'connect', 'deep-audit', 'study', 'parallel')) {
-                throw "Для команды 'prompt' укажите 'connect', 'audit', 'deep-audit', 'study' или 'parallel'."
+            if ([string]::IsNullOrWhiteSpace($ListTarget) -or $ListTarget.ToLowerInvariant() -notin @('audit', 'connect', 'deep-audit', 'study', 'parallel', 'bootstrap')) {
+                throw "Для команды 'prompt' укажите 'connect', 'audit', 'deep-audit', 'study', 'parallel' или 'bootstrap'."
             }
             $promptName = $ListTarget.ToLowerInvariant()
             $promptArguments = @('-Name', $promptName)
-            if ($promptName -in @('connect', 'deep-audit', 'study', 'parallel')) {
+            if ($promptName -in @('connect', 'deep-audit', 'study', 'parallel', 'bootstrap')) {
                 $resolvedProjectRoot = Resolve-ProjectRoot -Path $ProjectRoot
                 $promptArguments += @('-ProjectRoot', $resolvedProjectRoot)
             }

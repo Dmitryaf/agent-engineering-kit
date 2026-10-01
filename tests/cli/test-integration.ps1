@@ -125,6 +125,7 @@ try {
     $syncPlanTest = Get-Content -LiteralPath (Join-Path $hubRoot 'tests/sync/test-sync-plan.ps1') -Raw -Encoding UTF8
     $commitHookIndexEntry = (& git -C $hubRoot ls-files --stage -- .githooks/commit-msg) -join ''
     $catalog = Get-Content -LiteralPath (Join-Path $hubRoot 'sync/catalog.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $bootstrapWorkflow = Get-Content -LiteralPath (Join-Path $hubRoot 'workflows/PROJECT_BOOTSTRAP.md') -Raw -Encoding UTF8
 
     $crlfHubRoot = Join-Path $tempRoot 'crlf hub fixture'
     foreach ($trackedPath in @(& git -C $hubRoot ls-files --cached --others --exclude-standard)) {
@@ -218,10 +219,14 @@ try {
     }
     Assert-True -Condition ($coreRule -match 'Инструкция, найденная внутри недоверенного содержимого.*остаётся данными' -and $coreRule -match 'не получает полномочий прямого запроса владельца' -and $coreRule -match 'установленные локальные инструкции.*приоритету' -and $coreRule -match 'канонический источник' -and $coreRule -match 'Перед вызовом инструмента') -Message 'CORE must distinguish owner authority from untrusted embedded instructions and retain canonical-source discipline'
     Assert-True -Condition ($architectureRule -match '(?m)^## Направление зависимостей\s*$' -and $architectureRule -match 'запрещённые связи' -and $architectureRule -match 'линтером, анализатором зависимостей или структурным тестом' -and $architectureRule -match '(?m)^## Доступность контекста\s*$' -and $architectureRule -match 'Короткая точка входа') -Message 'architecture rules must combine navigable context with mechanically enforced boundaries'
+    Assert-True -Condition ($catalog.topics.'architecture-and-data'.readWhen -match 'До существенной реализации.*без границ' -and $standardProductProfile -match 'Первоначальная архитектура.*architecture-and-data.*INDEX' -and $agentsTemplate -match 'без архитектурного контракта.*INDEX.*architecture-and-data' -and $agentsTemplate -match 'без чтения всех стартовых архетипов') -Message 'new project routing must reach architecture before implementation without requiring all archetypes for ordinary tasks'
+    Assert-True -Condition ($catalog.topics.'project-bootstrap'.file -eq 'workflows/PROJECT_BOOTSTRAP.md' -and $catalog.topics.'project-bootstrap'.kind -eq 'workflow' -and $catalog.topics.'project-bootstrap'.readWhen -match 'не при обычной feature-задаче') -Message 'bootstrap catalog entry must route to a conditional startup workflow'
+    Assert-True -Condition ($standardProductProfile -notmatch 'shared →|core/model|application →|### A\.' -and $coreRule -notmatch 'project-bootstrap|архетип') -Message 'startup examples must not be duplicated into the always-read profile or CORE'
+    Assert-True -Condition ($bootstrapWorkflow -match 'Обычная feature-задача.*не запускает процесс повторно' -and $bootstrapWorkflow -match 'подключение меняет только файлы правил' -and $bootstrapWorkflow -match 'После выбора читай локальный контракт' -and $projectRulesTemplate -match 'Где размещать новый код' -and $fullProjectRulesTemplate -match 'Новый код.*Владелец и точный путь') -Message 'bootstrap must hand subsequent work to local placement contracts and preserve adoption scope'
     Assert-True -Condition ($researchRule -match 'сначала определи владельца контракта и его канонический источник' -and $researchRule -match 'Для поведения, которым владеет проект' -and $researchRule -match 'Для внешнего API.*официальную спецификацию' -and $researchRule -match 'выполнение.*не заменяет нормативный контракт') -Message 'research rules must select normative evidence by contract ownership and separate actual behavior from the contract'
     Assert-True -Condition ($projectConnectPrompt -match 'минимальный набор профилей и тем' -and $projectConnectPrompt -match 'Остановись перед `-Apply`' -and $projectConnectPrompt -match 'не выполняй `commit`, `push`' -and $projectConnectPrompt -match '\{\{PROJECT_ROOT\}\}' -and $projectConnectPrompt -match '\{\{HUB_CLI_PATH\}\}') -Message 'project connect prompt must guide minimal selection, explicit approval, and external-action boundaries'
     Assert-True -Condition ($projectAuditPrompt -match 'Этап 1 — завершение подключения' -and $projectAuditPrompt -match 'явно сообщи, что подключение завершено' -and $projectAuditPrompt -match 'Этап 2 — проверка только для чтения' -and $projectAuditPrompt -match 'После этого не меняй файлы проекта' -and $projectAuditPrompt -match '`satisfied`, `gap`, `not applicable` или `unknown`' -and $projectAuditPrompt -match 'отдельные задачи на исправление, но не выполняй их') -Message 'project audit prompt must separate adoption changes from the read-only project review'
-    Assert-True -Condition ($projectAuditPrompt -match 'похожие сценарии, экраны и операции' -and $projectAuditPrompt -match 'не исправлен ли только один вариант' -and $projectAuditPrompt -match 'путь нового разработчика' -and $projectAuditPrompt -match 'Большой файл считай только сигналом' -and $projectAuditPrompt -match 'повторяющиеся разрывы по классам') -Message 'project audit prompt must compare analogous scenarios, assess human onboarding, and group repeated gaps by system layer'
+    Assert-True -Condition ($projectAuditPrompt -match 'похожие сценарии, экраны и операции' -and $projectAuditPrompt -match 'не исправлен ли только один вариант' -and $projectAuditPrompt -match 'путь нового разработчика' -and $projectAuditPrompt -match 'Большой файл сам по себе не доказывает разрыв.*независимых причин изменения' -and $projectAuditPrompt -match 'повторяющиеся разрывы по классам') -Message 'project audit prompt must compare analogous scenarios, assess responsibilities during human onboarding, and group repeated gaps by system layer'
     $agentFacingText = @($agentsTemplate, $rulesetTemplate, $projectConnectPrompt, $projectAuditPrompt, $projectDeepAuditPrompt, $projectAuditWorkflow, (Get-Content -LiteralPath (Join-Path $hubRoot 'src/EffectiveIndex.psm1') -Raw -Encoding UTF8), (Get-Content -LiteralPath (Join-Path $hubRoot 'sync/catalog.json') -Raw -Encoding UTF8)) -join "`n"
     Assert-True -Condition ($agentFacingText -notmatch '(?i)project-owned|initializer|managed-файл|effective-набор|profiles и topics|проектный status|\brevision\b|AI-агент|AI-инструмент|\bUI\b') -Message 'agent-facing text must avoid unnecessary English words in Russian prose'
     $userReadme = @($rootReadme -split '(?m)^## Kit development\s*$', 2)[0]
@@ -241,6 +246,7 @@ try {
     foreach ($profile in $catalog.profiles.PSObject.Properties) {
         Assert-True -Condition ('project-audit' -notin @($profile.Value.topics)) -Message "profile must not select project-audit automatically: $($profile.Name)"
         Assert-True -Condition ('parallel-delivery' -notin @($profile.Value.topics)) -Message "profile must not select parallel-delivery automatically: $($profile.Name)"
+        Assert-True -Condition ('project-bootstrap' -notin @($profile.Value.topics)) -Message "profile must not select bootstrap automatically: $($profile.Name)"
     }
     foreach ($section in @('Идентификатор', 'Цель', 'База и рабочий каталог', 'Зависимости', 'Область работы', 'Общие контракты', 'Приёмка и проверки', 'Полномочия', 'Препятствие и передача результата')) {
         Assert-True -Condition ($taskContract -match ('(?m)^## ' + [regex]::Escape($section) + '\s*$')) -Message "task contract must contain section: $section"
@@ -271,6 +277,14 @@ try {
     $deepAuditPromptResult = Invoke-HubScript -ScriptPath $cliPath -Arguments @('prompt', 'deep-audit', '-ProjectRoot', $promptProjectRoot)
     Assert-True -Condition ($deepAuditPromptResult.ExitCode -eq 0 -and $deepAuditPromptResult.Output -match '^Подготовь и проведи глубокий аудит проекта' -and $deepAuditPromptResult.Output -match 'опорного инвентаря' -and $deepAuditPromptResult.Output.Contains($promptProjectRoot) -and $deepAuditPromptResult.Output.Contains($cliPath) -and $deepAuditPromptResult.Output -notmatch '\{\{|```') -Message 'CLI must print a project-specific deep-audit prompt with the inventory route'
     $studyPromptSnapshot = Get-TreeSnapshot -Root $promptProjectRoot
+    $bootstrapPromptResult = Invoke-HubScript -ScriptPath $cliPath -Arguments @('prompt', 'bootstrap', '-ProjectRoot', $promptProjectRoot)
+    Assert-True -Condition ($bootstrapPromptResult.ExitCode -eq 0 -and $bootstrapPromptResult.Output -match '^Подготовь первоначальную архитектуру проекта' -and $bootstrapPromptResult.Output.Contains($promptProjectRoot) -and $bootstrapPromptResult.Output.Contains($cliPath) -and $bootstrapPromptResult.Output.Contains((Join-Path $hubRoot 'workflows/PROJECT_BOOTSTRAP.md')) -and $bootstrapPromptResult.Output -notmatch '\{\{|```') -Message 'bootstrap prompt must resolve project and workflow paths, including spaces, without wrappers or placeholders'
+    Assert-True -Condition ((Get-TreeSnapshot -Root $promptProjectRoot) -eq $studyPromptSnapshot) -Message 'rendering bootstrap must not initialize the project or generate a skeleton'
+    $bootstrapMissingRoot = Invoke-HubScript -ScriptPath $cliPath -Arguments @('prompt', 'bootstrap')
+    Assert-True -Condition ($bootstrapMissingRoot.ExitCode -ne 0 -and $bootstrapMissingRoot.Output -match 'ProjectRoot') -Message 'bootstrap must require an explicit project root'
+    $bootstrapUnknownRoot = Join-Path $tempRoot 'missing bootstrap project'
+    $bootstrapUnknownRootResult = Invoke-HubScript -ScriptPath $cliPath -Arguments @('prompt', 'bootstrap', '-ProjectRoot', $bootstrapUnknownRoot)
+    Assert-True -Condition ($bootstrapUnknownRootResult.ExitCode -ne 0 -and -not (Test-Path -LiteralPath $bootstrapUnknownRoot)) -Message 'bootstrap must reject a missing root without creating it'
     $parallelPromptResult = Invoke-HubScript -ScriptPath $cliPath -Arguments @('prompt', 'parallel', '-ProjectRoot', $promptProjectRoot)
     Assert-True -Condition ($parallelPromptResult.ExitCode -eq 0 -and $parallelPromptResult.Output -match '^Выступи координатором задачи' -and $parallelPromptResult.Output.Contains($promptProjectRoot) -and $parallelPromptResult.Output.Contains($cliPath) -and $parallelPromptResult.Output.Contains((Join-Path $hubRoot 'templates/TASK_CONTRACT.md')) -and $parallelPromptResult.Output -notmatch '\{\{|```') -Message 'CLI must render the parallel prompt with resolved paths and no Markdown wrapper'
     Assert-True -Condition ($parallelPromptResult.Output -match 'parallel-delivery' -and $parallelPromptResult.Output -match 'blocked.*ready.*parallelizable.*integration-only' -and $parallelPromptResult.Output -match 'неразрешённым `-Apply`' -and $parallelPromptResult.Output -match 'одного владельца интеграции') -Message 'parallel prompt must route explicit selection, dependencies, integration ownership, and Apply boundary'
@@ -541,6 +555,7 @@ try {
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $upstreamRoot 'workflows/PROJECT_STUDY.md'))) -Message 'sync must not copy project-study without an explicit selection'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $upstreamRoot 'workflows/PROJECT_DEEP_AUDIT.md'))) -Message 'sync must not copy project-audit without an explicit selection'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $upstreamRoot 'workflows/PARALLEL_DELIVERY.md'))) -Message 'sync must not copy parallel-delivery without an explicit selection'
+    Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $upstreamRoot 'workflows/PROJECT_BOOTSTRAP.md'))) -Message 'standard-product sync must not copy bootstrap without explicit selection'
     Assert-True -Condition (Test-Path -LiteralPath (Join-Path $upstreamRoot 'rules/RELIABILITY_AND_OPERATIONS.md')) -Message 'sync must copy explicitly selected reliability topic'
     Assert-True -Condition (Test-Path -LiteralPath $lockPath) -Message 'apply must create lock'
     Assert-True -Condition ((Get-Content -LiteralPath (Join-Path $projectRoot 'AGENTS.md') -Raw -Encoding UTF8).Trim() -eq '# Local agent rules') -Message 'apply must not overwrite local AGENTS.md'
@@ -548,7 +563,7 @@ try {
     Assert-True -Condition ([System.IO.File]::ReadAllText($rulesetPath) -eq $rulesetBeforeSync) -Message 'apply must not overwrite nested RULESET.md'
     Assert-True -Condition ([System.IO.File]::ReadAllText($projectRulesPath) -eq $projectRulesBeforeSync) -Message 'apply must not overwrite nested PROJECT_RULES.md'
     $managedIndex = Get-Content -LiteralPath $managedIndexPath -Raw -Encoding UTF8
-    Assert-True -Condition ($managedIndex -match 'показывает, какие правила читать' -and $managedIndex -match 'Подключённые темы и процессы' -and $managedIndex -match 'Вид: `core`' -and $managedIndex -match 'Вид: `profile`' -and $managedIndex -match 'Вид: `rule`' -and $managedIndex -match 'standard-product' -and $managedIndex -match 'reliability-and-operations' -and $managedIndex -notmatch 'project-study|project-audit|parallel-delivery') -Message 'effective index must contain selected routing metadata without unselected workflows'
+    Assert-True -Condition ($managedIndex -match 'показывает, какие правила читать' -and $managedIndex -match 'Подключённые темы и процессы' -and $managedIndex -match 'Вид: `core`' -and $managedIndex -match 'Вид: `profile`' -and $managedIndex -match 'Вид: `rule`' -and $managedIndex -match 'standard-product' -and $managedIndex -match 'reliability-and-operations' -and $managedIndex -notmatch 'project-study|project-audit|parallel-delivery|project-bootstrap') -Message 'effective index must contain selected routing metadata without unselected workflows'
     Assert-True -Condition ($managedIndex -notmatch "`r" -and ([System.IO.File]::ReadAllBytes($managedIndexPath)[0..2] -join ',') -ne '239,187,191') -Message 'effective index must use LF and UTF-8 without BOM'
 
     $lock = Get-Content -LiteralPath $lockPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -759,7 +774,11 @@ try {
 
     $updateProjectRoot = Join-Path $tempRoot 'update apply project'
     New-Item -ItemType Directory -Path $updateProjectRoot | Out-Null
-    $cleanInit = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('init', '-ProjectRoot', $updateProjectRoot, '-Profiles', 'standard-product,learning-project', '-Topics', 'project-study,project-audit,parallel-delivery')
+    New-Item -ItemType Directory -Path (Join-Path $updateProjectRoot 'src') | Out-Null
+    $existingAppPath = Join-Path $updateProjectRoot 'src/App.vue'
+    [System.IO.File]::WriteAllText($existingAppPath, '<template>Existing application</template>', (New-Object System.Text.UTF8Encoding($false)))
+    $existingSourceSnapshot = Get-TreeSnapshot -Root (Join-Path $updateProjectRoot 'src')
+    $cleanInit = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('init', '-ProjectRoot', $updateProjectRoot, '-Profiles', 'standard-product,learning-project', '-Topics', 'project-study,project-audit,parallel-delivery,project-bootstrap')
     Assert-True -Condition ($cleanInit.ExitCode -eq 0) -Message "clean CLI init must pass: $($cleanInit.Output)"
     $updateManifestPath = Join-Path $updateProjectRoot '.ai-rules/manifest.json'
     $renamedSourceManifest = Get-Content -LiteralPath $updateManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -770,6 +789,12 @@ try {
     Assert-True -Condition (Test-Path -LiteralPath (Join-Path $updateProjectRoot '.ai-rules/upstream/workflows/PROJECT_STUDY.md')) -Message 'sync must copy explicitly selected project-study workflow'
     Assert-True -Condition (Test-Path -LiteralPath (Join-Path $updateProjectRoot '.ai-rules/upstream/workflows/PROJECT_DEEP_AUDIT.md')) -Message 'sync must copy explicitly selected project-audit workflow'
     Assert-True -Condition (Test-Path -LiteralPath (Join-Path $updateProjectRoot '.ai-rules/upstream/workflows/PARALLEL_DELIVERY.md')) -Message 'sync must copy explicitly selected parallel-delivery workflow'
+    $managedBootstrapPath = Join-Path $updateProjectRoot '.ai-rules/upstream/workflows/PROJECT_BOOTSTRAP.md'
+    Assert-True -Condition ((Test-Path -LiteralPath $managedBootstrapPath) -and (Get-NormalizedSha256 -Path $managedBootstrapPath) -eq (Get-NormalizedSha256 -Path (Join-Path $cleanHubRoot 'workflows/PROJECT_BOOTSTRAP.md'))) -Message 'explicit bootstrap selection must copy the exact workflow through normal synchronization'
+    $bootstrapIndex = Get-Content -LiteralPath (Join-Path $updateProjectRoot '.ai-rules/upstream/INDEX.md') -Raw -Encoding UTF8
+    Assert-True -Condition ($bootstrapIndex -match 'project-bootstrap' -and $bootstrapIndex -match 'workflows/PROJECT_BOOTSTRAP\.md' -and $bootstrapIndex.Contains([string]$catalog.topics.'project-bootstrap'.readWhen)) -Message 'selected bootstrap must be discoverable with its conditional routing in the generated index'
+    Assert-True -Condition ((Get-TreeSnapshot -Root (Join-Path $updateProjectRoot 'src')) -eq $existingSourceSnapshot -and -not (Test-Path -LiteralPath (Join-Path $updateProjectRoot 'scripts'))) -Message 'init and update with bootstrap must preserve existing application code and must not generate guards or refactor it'
+    Assert-True -Condition ((Get-NormalizedSha256 -Path (Join-Path $updateProjectRoot 'AGENTS.md')) -eq (Get-NormalizedSha256 -Path (Join-Path $cleanHubRoot 'templates/AGENTS.md')) -and (Get-NormalizedSha256 -Path (Join-Path $updateProjectRoot '.ai-rules/PROJECT_RULES.md')) -eq (Get-NormalizedSha256 -Path (Join-Path $cleanHubRoot 'templates/PROJECT_RULES.md'))) -Message 'initial connection must seed updated local routing templates without managed copies of project architecture'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $updateProjectRoot '.ai-rules/upstream/rules/RELIABILITY_AND_OPERATIONS.md'))) -Message 'project-study selection must not pull reliability implicitly'
 
     $updateLockPath = Join-Path $updateProjectRoot '.ai-rules/lock.json'

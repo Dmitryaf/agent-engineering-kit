@@ -31,6 +31,14 @@ Copy the generated prompt into the AI agent working on that project. The agent w
 
 Then return to your normal project work. You do not need to learn how the kit works or select rule files manually.
 
+For a new product, start with a small architecture before implementing its first scenario:
+
+```powershell
+.\ai-rules.ps1 prompt bootstrap -ProjectRoot C:\path\to\project
+```
+
+Paste the prompt with your goal and first scenario. The agent chooses where code belongs, creates only the needed parts, and checks the important dependency boundaries. Connecting an existing project does not restructure its code.
+
 For a deep project audit later, generate a dedicated prompt:
 
 ```powershell
