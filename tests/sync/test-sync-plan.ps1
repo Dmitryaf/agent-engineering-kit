@@ -23,6 +23,8 @@ try {
     $indexEntries = @($plan.Entries | Where-Object { $_.Target -eq '.ai-rules/upstream/INDEX.md' })
     if ($indexEntries.Count -ne 1 -or $indexEntries[0].Source -ne 'generated/effective-index') { throw 'Sync plan must contain one generated effective index.' }
     if ($indexEntries[0].Content -notmatch 'standard-product' -or $indexEntries[0].Content -notmatch '`profile`' -or $indexEntries[0].Content -match 'project-study|project-audit|parallel-delivery') { throw 'Effective index must describe only selected profiles and effective topics.' }
+    $coreEntries = @($plan.Entries | Where-Object { $_.Target -eq '.ai-rules/upstream/CORE.md' })
+    if ($coreEntries.Count -ne 1 -or $coreEntries[0].Source -ne 'rules/CORE.md' -or $indexEntries[0].Content -notmatch '### `core`' -or $indexEntries[0].Content -notmatch '`CORE.md`') { throw 'The mandatory core must be installed once and routed in the effective index.' }
     if (@($plan.Entries | Where-Object { $_.Target -eq '.ai-rules/upstream/workflows/PARALLEL_DELIVERY.md' }).Count -ne 0) { throw 'Unselected parallel workflow must not enter the sync plan.' }
     if ($indexEntries[0].Sha256 -ne (Get-AiRulesSha256Text -Content $indexEntries[0].Content)) { throw 'Effective index hash must cover generated content.' }
     $secondPlan = Get-AiRulesSyncPlan -HubRoot $hubRoot -ProjectRoot $projectRoot
@@ -40,7 +42,7 @@ try {
     $caseBoundaryAccepted = $true
     try { [void](Get-AiRulesSafePath -BasePath (Join-Path $projectRoot 'CaseBase') -ChildPath '../casebase/escape.md' -Label 'case boundary') } catch { $caseBoundaryAccepted = $false }
     if (($env:OS -eq 'Windows_NT') -ne $caseBoundaryAccepted) { throw 'Path containment must follow filesystem case sensitivity.' }
-    Write-Host 'Sync plan tests passed: 11 assertions.' -ForegroundColor Green
+    Write-Host 'Sync plan tests passed: 12 assertions.' -ForegroundColor Green
 }
 finally {
     if (Test-Path -LiteralPath $projectRoot) { Remove-Item -LiteralPath $projectRoot -Recurse -Force }

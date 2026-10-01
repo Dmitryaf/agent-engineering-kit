@@ -21,9 +21,9 @@ if ([string]$catalog.topics.'project-study'.file -ne 'workflows/PROJECT_STUDY.md
 if ([string]$catalog.topics.'project-audit'.file -ne 'workflows/PROJECT_DEEP_AUDIT.md') { throw 'Project-audit ID must route to the deep-audit workflow.' }
 if ([string]$catalog.topics.'parallel-delivery'.file -ne 'workflows/PARALLEL_DELIVERY.md' -or [string]$catalog.topics.'parallel-delivery'.kind -ne 'workflow') { throw 'Parallel-delivery ID must route to the task workflow.' }
 foreach ($profile in $catalog.profiles.PSObject.Properties) {
-    if ('project-study' -in @($profile.Value.topics)) { throw "Profile must not select project-study automatically: $($profile.Name)" }
-    if ('project-audit' -in @($profile.Value.topics)) { throw "Profile must not select project-audit automatically: $($profile.Name)" }
-    if ('parallel-delivery' -in @($profile.Value.topics)) { throw "Profile must not select parallel-delivery automatically: $($profile.Name)" }
+    foreach ($topic in @($profile.Value.topics)) {
+        if ([string]$catalog.topics.$topic.kind -eq 'workflow') { throw "Profile must not select a workflow automatically: $($profile.Name) -> $topic" }
+    }
 }
 if ($implementation -match 'оформляются явными блоками' -or $implementation -notmatch 'точный стиль скобок.*локальным стандартом') { throw 'Portable implementation policy must preserve the invariant without selecting a brace style.' }
 if ($architecture -match 'настрой стабильный алиас корня|\.\./\.\./\.\./') { throw 'Portable architecture policy must not prescribe a root alias or fixed import depth.' }
