@@ -35,7 +35,7 @@ foreach ($control in @($controlsDocument.controls)) {
 }
 
 $caseFiles = @(Get-ChildItem -LiteralPath (Join-Path $hubRoot 'evals/cases') -File -Filter '*.json' | Sort-Object Name)
-Assert-True ($caseFiles.Count -eq 21) 'exactly twenty-one representative cases are required'
+Assert-True ($caseFiles.Count -eq 24) 'exactly twenty-four representative cases are required'
 $caseIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $positiveCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $negativeCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -119,6 +119,25 @@ Assert-True (@($studyLifecycleCase.expectedChecks).Count -ge 8 -and @($studyLife
 Assert-True ($studyLifecycleText -match 'SHA' -and $studyLifecycleText -match 'evidence' -and $studyLifecycleText -match 'failure branches') 'project-study lifecycle case must include slice evidence and failure semantics'
 foreach ($requiredControlId in @('scope.no-unrelated-changes', 'evidence.separate-fact-assumption', 'context.load-relevant-only')) {
     Assert-True ($requiredControlId -in @($studyLifecycleCase.controlExpectations.controlId)) "project-study lifecycle case must reuse control: $requiredControlId"
+}
+
+$decisionCaseContracts = @(
+    @{ File = '17-decision-map-lifecycle.json'; Id = 'decision-map-lifecycle'; Signals = @('status: superseded', 'superseded_by: D-0002', 'implementation: not_implemented', 'supersedes: [D-0001]') },
+    @{ File = '22-decision-private-versioned-source.json'; Id = 'decision-private-versioned-source'; Signals = @('.local', 'schema_version: 1', 'visibility: private', 'private-context/public-project/decisions/', 'Git history') },
+    @{ File = '23-decision-small-edit-no-record.json'; Id = 'decision-small-edit-no-record'; Signals = @('format-date.js', 'Decision') },
+    @{ File = '24-decision-legacy-and-review-triggers.json'; Id = 'decision-legacy-and-review-triggers'; Signals = @('docs/adr', 'schema_version: 1', 'status: proposed', 'implementation: unknown', 'review_after', '2026-11-01', 'Markdown', 'ADR-7') }
+)
+foreach ($contract in $decisionCaseContracts) {
+    $case = Get-Content -LiteralPath (Join-Path $hubRoot ('evals/cases/' + $contract.File)) -Raw -Encoding UTF8 | ConvertFrom-Json
+    Assert-True ($case.id -eq $contract.Id) "decision case ID must stay stable: $($contract.File)"
+    $checksText = @($case.expectedChecks) -join "`n"
+    foreach ($signal in $contract.Signals) {
+        Assert-True ($checksText.Contains($signal)) "decision case must cover its contract signal: $($contract.Id)/$signal"
+    }
+    foreach ($requiredControlId in @('scope.no-unrelated-changes', 'context.load-relevant-only')) {
+        if ($requiredControlId -eq 'context.load-relevant-only' -and $contract.Id -ne 'decision-small-edit-no-record') { continue }
+        Assert-True ($requiredControlId -in @($case.controlExpectations.controlId)) "decision case must reuse control: $($contract.Id)/$requiredControlId"
+    }
 }
 
 $resultTemplate = Get-Content -LiteralPath (Join-Path $hubRoot 'evals/runs/RESULT_TEMPLATE.json') -Raw -Encoding UTF8 | ConvertFrom-Json
