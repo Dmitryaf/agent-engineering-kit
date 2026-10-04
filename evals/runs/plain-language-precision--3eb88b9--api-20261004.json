@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "0.2",
+  "runId": "plain-language-20261004-api",
+  "caseId": "plain-language-precision",
+  "subject": {
+    "agent": "Codex CLI 0.158.0 / default model (not reported in the event log)",
+    "hubRevision": "3eb88b9d97881307e7e5c79238300991cf34e545",
+    "workflowRevision": "none",
+    "fixtureRevision": "sha256:c7b67531e43bac6e47436571a2397484564a0ceef63f792f65763b9cb1fe6a01",
+    "environment": {
+      "platform": "windows",
+      "runner": "local-codex-cli",
+      "workspaceAccess": "read-only",
+      "networkAccess": "unknown",
+      "shellCommands": "unknown"
+    }
+  },
+  "startedAtUtc": "2026-10-04T14:20:28.0170384Z",
+  "completedAtUtc": "2026-10-04T14:20:41.9237762Z",
+  "taskSuccess": false,
+  "controlResults": [
+    {
+      "controlId": "language.plain-without-losing-precision",
+      "status": "unknown",
+      "evidence": [
+        "The agent returned explanations for all three fragments.",
+        "The HTTP explanation preserved code 409 and described a conflict with the current data state, but omitted the exact status name Conflict.",
+        "A concurrent edit was presented as an example; the response stated that the exact cause depends on the request."
+      ],
+      "notes": [
+        "Naturalness and semantic preservation await the human review required by evals/README.md; no automatic judge was used.",
+        "No CORE read was observed, so this response cannot establish behavior under the installed Kit rule."
+      ]
+    },
+    {
+      "controlId": "context.load-relevant-only",
+      "status": "violation",
+      "evidence": [
+        "The fixture used the standard AGENTS.md template and a synchronized Kit connection.",
+        "The completed JSONL stream contains one agent-message item and no tool-call items; it contains no read of CORE or the other mandatory local documents."
+      ],
+      "notes": ["The observed violation concerns the mandatory reading route; preparation made CORE available but does not prove that the agent read it."]
+    }
+  ],
+  "inventoryResults": [],
+  "coverageResults": [],
+  "violations": ["context.load-relevant-only: the mandatory file-reading route was not followed in the observed run."],
+  "unrelatedChangedFiles": [],
+  "unknownDataPreserved": null,
+  "checksRun": [
+    "Standard connect preview and Apply with only the documentation topic and no profiles",
+    "doctor completed without warnings; status reported State: synchronized",
+    "Installed CORE matched the selected hub content; its SHA-256 was c7cb1bac775fc46bb08d6855e9b7375df2702043e3a3cc76a22f4a191853a059",
+    "The submitted prompt matched case.task exactly, with no expected answers or grading criteria",
+    "The API run completed with exit code 0",
+    "File and Git-metadata snapshots matched before and after the run",
+    "The complete JSONL stream was inspected for reads and the final response"
+  ],
+  "evidence": [
+    "First explanation: Нужно понять, стоит ли развивать выбранное направление. Сколько времени и денег потребуется, чтобы проверить, работает ли идея? И почему пользователь захочет вернуться к продукту после первого знакомства — какую пользу он будет получать снова?",
+    "Second explanation: Нужно разбить проблему на понятные части и проверить наше предположение. Выяснить, что именно не работает и почему, а затем проверить фактами, поможет ли предложенное решение. Например, испытать простой прототип на пользователях.",
+    "Third explanation: Сервер не смог выполнить запрос, потому что он противоречит текущему состоянию данных. Например, вы редактировали запись, а другой человек уже успел её изменить. В таком случае нужно загрузить свежую версию и согласовать изменения. HTTP 409 — код такого конфликта; точная причина зависит от конкретного запроса."
+  ],
+  "notes": [
+    "The agent was invoked with --ignore-user-config, --ephemeral and --sandbox read-only; approval_policy was never. No model override was supplied and the model ID was not exposed in the event log.",
+    "API transport was permitted for this run; agent-side network and shell permissions were not exercised and remain unknown.",
+    "fixtureRevision is the SHA-256 of the complete case JSON used for the task and fixture setup.",
+    "taskSuccess is false because the mandatory reading route was not followed and the response did not retain the full requested status name; receiving three explanations alone does not satisfy the scenario.",
+    "An earlier transport-only attempt failed before an agent response because the host sandbox denied API access; it is not a second behavioral observation.",
+    "This single run is diagnostic. It does not measure the causal effect or general quality of the Kit language rule.",
+    "Raw logs and temporary paths were kept outside Git. CORE and the task were not changed after observing the response."
+  ]
+}

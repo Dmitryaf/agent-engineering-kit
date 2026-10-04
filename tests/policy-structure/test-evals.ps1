@@ -19,12 +19,13 @@ $expectedControlIds = @(
     'data.preserve-unknown',
     'evidence.separate-fact-assumption',
     'verification.risk-based',
-    'context.load-relevant-only'
+    'context.load-relevant-only',
+    'language.plain-without-losing-precision'
 )
 $controlsDocument = Get-Content -LiteralPath (Join-Path $hubRoot 'evals/controls.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $controlIds = @($controlsDocument.controls | ForEach-Object { [string]$_.id })
 Assert-True ($controlsDocument.schemaVersion -eq '0.1') 'controls schema version must be 0.1'
-Assert-True ($controlIds.Count -eq 8) 'exactly eight controls are required'
+Assert-True ($controlIds.Count -eq 9) 'exactly nine controls are required'
 Assert-True ((@($controlIds | Sort-Object) -join "`n") -eq (@($expectedControlIds | Sort-Object) -join "`n")) 'control IDs must match the stage contract'
 Assert-True (@($controlIds | Sort-Object -Unique).Count -eq $controlIds.Count) 'control IDs must be unique'
 foreach ($control in @($controlsDocument.controls)) {
@@ -34,7 +35,7 @@ foreach ($control in @($controlsDocument.controls)) {
 }
 
 $caseFiles = @(Get-ChildItem -LiteralPath (Join-Path $hubRoot 'evals/cases') -File -Filter '*.json' | Sort-Object Name)
-Assert-True ($caseFiles.Count -eq 19) 'exactly nineteen representative cases are required'
+Assert-True ($caseFiles.Count -eq 20) 'exactly twenty representative cases are required'
 $caseIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $positiveCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $negativeCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -100,6 +101,15 @@ Assert-True ($protectedPromotionText -match 'CI job' -and $protectedPromotionTex
 foreach ($requiredControlId in @('scope.no-unrelated-changes', 'owner.explicit-apply', 'evidence.separate-fact-assumption', 'verification.risk-based')) {
     Assert-True ($requiredControlId -in @($protectedPromotionCase.controlExpectations.controlId)) "protected-promotion case must reuse control: $requiredControlId"
 }
+
+$languageCase = Get-Content -LiteralPath (Join-Path $hubRoot 'evals/cases/20-plain-language-precision.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+Assert-True ($languageCase.id -eq 'plain-language-precision') 'plain-language case ID must stay stable'
+foreach ($requiredControlId in @('language.plain-without-losing-precision', 'context.load-relevant-only')) {
+    Assert-True ($requiredControlId -in @($languageCase.controlExpectations.controlId)) "plain-language case must cover control: $requiredControlId"
+}
+Assert-True ($languageCase.task -match 'HTTP 409 Conflict' -and ([regex]::Matches($languageCase.task, '(?m)^[123]\. ')).Count -eq 3) 'plain-language task must include all three fragments and the exact HTTP status'
+$languageFixtureText = $languageCase.fixture | ConvertTo-Json -Depth 10
+Assert-True ($languageFixtureText -match 'connect' -and $languageFixtureText -match '-Topics documentation' -and $languageFixtureText -match 'AGENTS\.md' -and $languageFixtureText -match '\.ai-rules/upstream/CORE\.md' -and $languageFixtureText -match 'doctor' -and $languageFixtureText -match 'State: synchronized') 'plain-language fixture must route current CORE through standard project connection'
 
 $resultTemplate = Get-Content -LiteralPath (Join-Path $hubRoot 'evals/runs/RESULT_TEMPLATE.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 Assert-True ($resultTemplate.schemaVersion -eq '0.2') 'result template schema version must be 0.2'
