@@ -71,6 +71,7 @@ function Get-RulesetSeedContent {
 $hubRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $projectRootFull = (Resolve-Path -LiteralPath $ProjectRoot).Path
 . (Join-Path $hubRoot 'scripts/sync-common.ps1')
+Import-Module (Join-Path $hubRoot 'src/PublicRepository.psm1') -ErrorAction Stop
 $catalogPath = Join-Path $hubRoot 'sync/catalog.json'
 $catalog = Get-Content -LiteralPath $catalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
@@ -121,6 +122,11 @@ foreach ($unsupportedRootSyncFile in $unsupportedRootSyncFiles) {
 
 if (Test-Path -LiteralPath $manifestPath) {
     throw "Sync manifest уже существует и не будет перезаписан: $manifestPath"
+}
+
+if ('public-repository' -in $Profiles) {
+    $excludePlan = Set-AiRulesLocalOnlyExclude -ProjectRoot $projectRootFull
+    Write-Host $(if ($excludePlan.Git) { 'Kit runtime: локальные исключения установлены; tracked-файлы требуют отдельного перехода.' } else { 'Kit runtime: Git отсутствует; локальные файлы не требуют публикации.' })
 }
 
 if (-not (Test-Path -LiteralPath $localRulesRoot -PathType Container)) {

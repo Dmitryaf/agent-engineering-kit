@@ -3,6 +3,7 @@ Import-Module (Join-Path $moduleRoot 'Catalog.psm1') -ErrorAction Stop
 Import-Module (Join-Path $moduleRoot 'Contracts.psm1') -ErrorAction Stop
 Import-Module (Join-Path $moduleRoot 'GitState.psm1') -ErrorAction Stop
 Import-Module (Join-Path $moduleRoot 'SyncPlan.psm1') -ErrorAction Stop
+Import-Module (Join-Path $moduleRoot 'PublicRepository.psm1') -ErrorAction Stop
 
 function Read-AiRulesJsonFile {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -132,7 +133,13 @@ function Get-AiRulesProjectState {
         }
     }
 
+    $publication = $null
+    if ('public-repository' -in $profiles) {
+        $publication = Get-AiRulesPublicRepositoryState -ProjectRoot $projectRootFull
+    }
+
     return New-AiRulesProjectState -Properties @{
+        Publication = $publication
         ProjectRoot = $projectRootFull
         ProjectName = Split-Path -Leaf $projectRootFull.TrimEnd([char[]]@('\', '/'))
         HubRoot = $hubRootFull

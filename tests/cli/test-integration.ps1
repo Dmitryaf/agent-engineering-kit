@@ -267,7 +267,7 @@ try {
     $cliPath = Join-Path $hubRoot 'ai-rules.ps1'
     $helpResult = Invoke-HubScript -ScriptPath $cliPath -Arguments @('help')
     Assert-True -Condition ($helpResult.ExitCode -eq 0 -and $helpResult.Output -match 'git pull' -and $helpResult.Output -match 'git fetch') -Message 'CLI help must pass and explain the no-fetch boundary'
-    Assert-True -Condition ($helpResult.Output -match 'Подключить проект' -and $helpResult.Output -match 'Обновить правила' -and $helpResult.Output -match 'Команды без -Apply только показывают' -and $helpResult.Output -notmatch '(?i:revision|manifest|checkout|preview|\bCLI\b)|(?-i:\bPlan\b)') -Message 'CLI help must put the ordinary user path first and avoid internal vocabulary'
+    Assert-True -Condition ($helpResult.Output -match 'Подключить проект' -and $helpResult.Output -match 'Обновить правила' -and $helpResult.Output -match 'connect и init создают локальный слой' -and $helpResult.Output -match 'local-only без -Apply ничего не записывают' -and $helpResult.Output -notmatch '(?i:revision|manifest|checkout|preview|\bCLI\b)|(?-i:\bPlan\b)') -Message 'CLI help must explain setup writes and read-only commands without internal vocabulary'
     $auditPromptResult = Invoke-HubScript -ScriptPath $cliPath -Arguments @('prompt', 'audit')
     Assert-True -Condition ($auditPromptResult.ExitCode -eq 0 -and $auditPromptResult.Output -match '^Заверши подключение Agent Engineering Kit' -and $auditPromptResult.Output -match 'Этап 1 — завершение подключения' -and $auditPromptResult.Output -match 'Этап 2 — проверка только для чтения' -and $auditPromptResult.Output -notmatch '```') -Message 'CLI must print the reusable audit prompt without its Markdown wrapper'
     $promptProjectRoot = Join-Path $tempRoot 'prompt project'

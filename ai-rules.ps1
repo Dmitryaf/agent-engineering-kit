@@ -28,6 +28,7 @@ Import-Module (Join-Path $hubRoot 'src/Catalog.psm1') -ErrorAction Stop
 Import-Module (Join-Path $hubRoot 'src/GitState.psm1') -ErrorAction Stop
 Import-Module (Join-Path $hubRoot 'src/ProjectState.psm1') -ErrorAction Stop
 Import-Module (Join-Path $hubRoot 'src/Diagnostics.psm1') -ErrorAction Stop
+Import-Module (Join-Path $hubRoot 'src/PublicRepository.psm1') -ErrorAction Stop
 
 function Write-Help {
     @'
@@ -72,10 +73,15 @@ Agent Engineering Kit
   connect -ProjectRoot ПУТЬ -Apply
                            Применить ранее показанные изменения.
   init   -ProjectRoot ПУТЬ Подготовить проект без применения правил.
+  local-only -ProjectRoot ПУТЬ
+                           Показать план локальных исключений и перехода.
+  local-only -ProjectRoot ПУТЬ -Apply
+                           Установить исключения без изменения Git index.
   plan  -ProjectRoot ПУТЬ Показать изменения для закреплённой версии.
   apply -ProjectRoot ПУТЬ Применить эти изменения.
 
-Команды без -Apply только показывают состояние или изменения.
+connect и init создают локальный слой до применения правил.
+plan, status, doctor, local-only без -Apply ничего не записывают.
 Хаб не выполняет git pull, git fetch, commit или push.
 '@ | Write-Host
 }
@@ -213,6 +219,12 @@ function Show-Status {
     $assessment = Get-AiRulesStatusAssessment -ProjectState $projectState
 
     Write-Host "Проект: $($projectState.ProjectName)"
+    if ($null -ne $projectState.Publication) {
+        Write-Host "Agent runtime files: $($projectState.Publication.Runtime)"
+        Write-Host "Private context: $($projectState.Publication.PrivateContext) (версионирование и резервное хранение не проверены)"
+        foreach ($diagnostic in $projectState.Publication.Diagnostics) { Write-Host "[$($diagnostic.Level)] $($diagnostic.Message)" }
+        foreach ($file in $projectState.Publication.PublicDocuments) { Write-Host "Публичное решение: $file (аудиторию определяет проект)" }
+    }
     foreach ($warning in @($assessment.Warnings)) { Write-Host "Предупреждение: $warning" }
     if (@($assessment.Diagnostics).Count -gt 0) {
         Write-Host 'Подробности:'
@@ -272,6 +284,13 @@ function Invoke-ProjectDoctor {
 
     Write-Host "Проверка проекта: $projectName"
     Write-Host "Корень проекта: $ResolvedProjectRoot"
+    if ($null -ne $projectState.Publication) {
+        Write-Host "Agent runtime files: $($projectState.Publication.Runtime)"
+        Write-Host "Private context: $($projectState.Publication.PrivateContext) (версионирование и резервное хранение не проверены)"
+        foreach ($diagnostic in $projectState.Publication.Diagnostics) {
+            Add-DoctorResult -Level $diagnostic.Level -Message $diagnostic.Message -Errors $errors -Warnings $warnings
+        }
+    }
     Write-Host ''
 
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
@@ -881,6 +900,29 @@ try {
         'status' {
             $resolvedProjectRoot = Resolve-ProjectRoot -Path $ProjectRoot
             Show-Status -ResolvedProjectRoot $resolvedProjectRoot
+        }
+        'local-only' {
+            $resolvedProjectRoot = Resolve-ProjectRoot -Path $ProjectRoot
+            $manifest = Get-JsonFile -Path (Join-Path $resolvedProjectRoot '.ai-rules/manifest.json')
+            if ('public-repository' -notin @($manifest.profiles)) {
+                throw 'local-only предназначен только для явно выбранного public-repository.'
+            }
+            $excludePlan = Get-AiRulesLocalOnlyPlan -ProjectRoot $resolvedProjectRoot
+            Write-Host "Local exclude: $(if (-not $excludePlan.Git) { 'no Git' } elseif ($excludePlan.Changed) { 'update required' } else { 'unchanged' })"
+            Write-Host 'Управляемые исключения: /.ai-rules/, /AGENTS.md, /.local/'
+            $publication = Get-AiRulesPublicRepositoryState -ProjectRoot $resolvedProjectRoot
+            foreach ($diagnostic in $publication.Diagnostics) { Write-Host "[$($diagnostic.Level)] $($diagnostic.Message)" }
+            if ($Apply) {
+                [void](Set-AiRulesLocalOnlyExclude -ProjectRoot $resolvedProjectRoot)
+                Write-Host 'Локальные исключения установлены. Git index, история и рабочие копии сохранены.'
+            }
+            else { Write-Host 'Только план: файлы не изменены. Применение исключений: local-only -Apply.' }
+            if (@($publication.TrackedRuntime).Count -gt 0) {
+                Write-Host 'После резервного сохранения уникальных правил и отдельного разрешения владельца выполните для tracked-инфраструктуры:'
+                $quotedProjectRoot = "'" + $resolvedProjectRoot.Replace("'", "''") + "'"
+                Write-Host ("git -C {0} --literal-pathspecs rm --cached -r --ignore-unmatch -- AGENTS.md .ai-rules .local" -f $quotedProjectRoot)
+                Write-Host 'Проверьте staged diff. Команда сохраняет локальные файлы; прошлые коммиты остаются публичными.'
+            }
         }
         'update' {
             $resolvedProjectRoot = Resolve-ProjectRoot -Path $ProjectRoot

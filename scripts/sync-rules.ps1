@@ -17,6 +17,7 @@ $ErrorActionPreference = 'Stop'
 $hubRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 . (Join-Path $hubRoot 'scripts/sync-common.ps1')
 Import-Module (Join-Path $hubRoot 'src/SyncPlan.psm1') -ErrorAction Stop
+Import-Module (Join-Path $hubRoot 'src/PublicRepository.psm1') -ErrorAction Stop
 
 function Test-AiRulesBytesEqual {
     param(
@@ -117,6 +118,12 @@ Write-Host "Revision хаба: $revision"
 Write-Host "Checkout хаба изменён: $sourceDirty"
 Write-Host "Manifest: .ai-rules/manifest.json"
 Write-Host "Managed root: $destinationRelative"
+if ('public-repository' -in $syncPlan.Profiles) {
+    $excludePlan = Get-AiRulesLocalOnlyPlan -ProjectRoot $projectRootFull
+    Write-Host "Local exclude: $(if (-not $excludePlan.Git) { 'no Git' } elseif ($excludePlan.Changed) { 'update required' } else { 'unchanged' })"
+    $publication = Get-AiRulesPublicRepositoryState -ProjectRoot $projectRootFull
+    foreach ($diagnostic in $publication.Diagnostics) { Write-Host "[$($diagnostic.Level)] $($diagnostic.Message)" }
+}
 $plan | Select-Object Action, Source, Target | Format-Table -AutoSize
 
 $actionOrder = @('add', 'update', 'unchanged', 'conflict', 'orphan', 'orphan-modified', 'orphan-missing')
@@ -148,6 +155,10 @@ if ($Mode -eq 'Plan') {
 $conflicts = @($plan | Where-Object { $_.Action -eq 'conflict' })
 if ($conflicts.Count -gt 0) {
     throw "Apply остановлен: конфликтов managed-файлов, требующих ручного решения: $($conflicts.Count)."
+}
+
+if ('public-repository' -in $syncPlan.Profiles) {
+    [void](Set-AiRulesLocalOnlyExclude -ProjectRoot $projectRootFull)
 }
 
 $lockEntries = @(

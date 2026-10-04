@@ -31,6 +31,25 @@ Copy the generated prompt into the AI agent working on that project. The agent w
 
 Then return to your normal project work. You do not need to learn how the kit works or select rule files manually.
 
+For a public project, select `public-repository`. The kit keeps three things separate:
+
+```text
+public repository       → code and documentation for external readers
+local agent runtime     → AGENTS.md + .ai-rules/
+Private Project Context → private, versioned internal documents and unique rules
+```
+
+Runtime files are excluded locally through Git's `info/exclude`; the public `.gitignore` is unchanged. A fresh clone can connect the kit again. Restore unique project rules from your chosen private source; ignored files alone are not a backup. Private repositories can keep the existing tracked model.
+
+If internal files are already tracked, preview the transition and install local exclusions:
+
+```powershell
+.\ai-rules.ps1 local-only -ProjectRoot C:\path\to\project
+.\ai-rules.ps1 local-only -ProjectRoot C:\path\to\project -Apply
+```
+
+These commands preserve the index, history and local files. They provide a separate instruction for untracking runtime files after saving unique rules and obtaining the owner's permission. Previously published files remain in old commits. See [private context and restoration](sync/README.md#публичный-проект-и-private-project-context) for setup and migration details.
+
 For a new product, start with a small architecture before implementing its first scenario:
 
 ```powershell
@@ -75,7 +94,7 @@ If they look correct, apply them:
 .\ai-rules.ps1 update -ProjectRoot C:\path\to\project -Apply
 ```
 
-The kit does not change your project without `-Apply`, overwrite rule files you changed manually, or run `commit`, `push`, or publishing commands.
+Initial `connect` and `init` create the local setup, including public-profile exclusions. Rule updates require `-Apply`; the kit preserves manually changed rules and does not run `commit`, `push`, or publishing commands.
 
 ## Kit development
 

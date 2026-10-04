@@ -3,7 +3,7 @@ param()
 
 $ErrorActionPreference = 'Stop'
 $hubRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
-$requiredModules = @('Catalog.psm1', 'Contracts.psm1', 'PathsAndHashing.psm1', 'GitState.psm1', 'EffectiveIndex.psm1', 'SyncPlan.psm1', 'ProjectState.psm1', 'Diagnostics.psm1')
+$requiredModules = @('Catalog.psm1', 'Contracts.psm1', 'PathsAndHashing.psm1', 'GitState.psm1', 'EffectiveIndex.psm1', 'SyncPlan.psm1', 'ProjectState.psm1', 'Diagnostics.psm1', 'PublicRepository.psm1')
 foreach ($module in $requiredModules) {
     if (-not (Test-Path -LiteralPath (Join-Path $hubRoot "src/$module") -PathType Leaf)) { throw "Required module is missing: $module" }
 }
@@ -16,4 +16,4 @@ if ($cli -notmatch 'Get-AiRulesProjectState' -or $cli -notmatch 'Get-AiRulesStat
 if ($syncPlan -match '\b(Set-Content|Add-Content|Copy-Item|Move-Item|Remove-Item|WriteAllBytes|WriteAllText)\b') { throw 'SyncPlan module must remain read-only.' }
 if ($effectiveIndex -match '\b(Set-Content|Add-Content|Copy-Item|Move-Item|Remove-Item|WriteAllBytes|WriteAllText)\b') { throw 'EffectiveIndex module must remain read-only.' }
 
-Write-Host 'Module boundary tests passed: 12 assertions.' -ForegroundColor Green
+Write-Host "Module boundary tests passed: $($requiredModules.Count + 4) assertions." -ForegroundColor Green
