@@ -35,7 +35,7 @@ foreach ($control in @($controlsDocument.controls)) {
 }
 
 $caseFiles = @(Get-ChildItem -LiteralPath (Join-Path $hubRoot 'evals/cases') -File -Filter '*.json' | Sort-Object Name)
-Assert-True ($caseFiles.Count -eq 20) 'exactly twenty representative cases are required'
+Assert-True ($caseFiles.Count -eq 21) 'exactly twenty-one representative cases are required'
 $caseIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $positiveCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $negativeCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -110,6 +110,16 @@ foreach ($requiredControlId in @('language.plain-without-losing-precision', 'con
 Assert-True ($languageCase.task -match 'HTTP 409 Conflict' -and ([regex]::Matches($languageCase.task, '(?m)^[123]\. ')).Count -eq 3) 'plain-language task must include all three fragments and the exact HTTP status'
 $languageFixtureText = $languageCase.fixture | ConvertTo-Json -Depth 10
 Assert-True ($languageFixtureText -match 'connect' -and $languageFixtureText -match '-Topics documentation' -and $languageFixtureText -match 'AGENTS\.md' -and $languageFixtureText -match '\.ai-rules/upstream/CORE\.md' -and $languageFixtureText -match 'doctor' -and $languageFixtureText -match 'State: synchronized') 'plain-language fixture must route current CORE through standard project connection'
+
+$studyLifecycleCasePath = Join-Path $hubRoot 'evals/cases/21-project-study-document-lifecycle.json'
+$studyLifecycleCase = Get-Content -LiteralPath $studyLifecycleCasePath -Raw -Encoding UTF8 | ConvertFrom-Json
+Assert-True ($studyLifecycleCase.id -eq 'project-study-document-lifecycle') 'project-study lifecycle case ID must stay stable'
+$studyLifecycleText = $studyLifecycleCase | ConvertTo-Json -Depth 10
+Assert-True (@($studyLifecycleCase.expectedChecks).Count -ge 8 -and @($studyLifecycleCase.prohibitedActions).Count -ge 6) 'project-study lifecycle case must cover both desired and prohibited document changes'
+Assert-True ($studyLifecycleText -match 'SHA' -and $studyLifecycleText -match 'evidence' -and $studyLifecycleText -match 'failure branches') 'project-study lifecycle case must include slice evidence and failure semantics'
+foreach ($requiredControlId in @('scope.no-unrelated-changes', 'evidence.separate-fact-assumption', 'context.load-relevant-only')) {
+    Assert-True ($requiredControlId -in @($studyLifecycleCase.controlExpectations.controlId)) "project-study lifecycle case must reuse control: $requiredControlId"
+}
 
 $resultTemplate = Get-Content -LiteralPath (Join-Path $hubRoot 'evals/runs/RESULT_TEMPLATE.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 Assert-True ($resultTemplate.schemaVersion -eq '0.2') 'result template schema version must be 0.2'
