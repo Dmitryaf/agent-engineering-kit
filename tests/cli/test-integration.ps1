@@ -839,7 +839,18 @@ try {
     Assert-True -Condition ((Get-TreeSnapshot -Root $updateProjectRoot) -eq $dirtyPreviewSnapshot) -Message 'rejected dirty low-level Apply must not change project files'
     $dirtyUpdateApply = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('update', '-ProjectRoot', $updateProjectRoot, '-Apply')
     Assert-True -Condition ($dirtyUpdateApply.ExitCode -ne 0 -and $dirtyUpdateApply.Output -match 'рабочее дерево хаба должно быть чистым' -and (Get-TreeSnapshot -Root $updateProjectRoot) -eq $dirtyPreviewSnapshot) -Message 'dirty update -Apply must remain blocked and read-only'
+    $dirtyOptIn = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('update', '-ProjectRoot', $updateProjectRoot, '-Apply', '-AllowDirtySource')
+    Assert-True -Condition ($dirtyOptIn.ExitCode -eq 0) 'explicit local snapshot update must succeed'
+    $dirtyAppliedLock = Get-Content -LiteralPath $updateLockPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    Assert-True -Condition ($dirtyAppliedLock.source.dirty -eq $true) 'local snapshot must retain dirty provenance'
+    foreach ($entry in $dirtyAppliedLock.files) {
+        if ($entry.state -ne 'managed') { continue }
+        Assert-True -Condition ((Get-NormalizedSha256 -Path (Join-Path $updateProjectRoot $entry.target)) -eq $entry.sha256) 'local snapshot hashes must describe normalized installed content'
+    }
+
     [System.IO.File]::WriteAllBytes($dirtyHubFilePath, $dirtyHubFileBytes)
+    $cleanAfterLocalSnapshot = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('update', '-ProjectRoot', $updateProjectRoot, '-Apply')
+    Assert-True -Condition ($cleanAfterLocalSnapshot.ExitCode -eq 0) 'clean update must replace the temporary local snapshot'
 
     $updateAgentsPath = Join-Path $updateProjectRoot 'AGENTS.md'
     $originalAgentsBytes = [System.IO.File]::ReadAllBytes($updateAgentsPath)

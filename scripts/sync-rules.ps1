@@ -10,6 +10,8 @@ param(
 
     [switch]$FailOnConflict,
 
+    [switch]$AllowDirtySource,
+
     [switch]$SuppressNextStep
 )
 
@@ -106,10 +108,10 @@ if ($Mode -eq 'Apply') {
     if ([string]::IsNullOrWhiteSpace($expectedRevision)) {
         throw 'Apply требует закреплённую source.revision с полным commit SHA; для первого применения используйте update -Apply.'
     }
-    if ($sourceDirty -eq $true) {
+    if ($sourceDirty -eq $true -and -not $AllowDirtySource) {
         throw 'Закреплённую синхронизацию нельзя применять из изменённого checkout хаба.'
     }
-    if ($sourceDirty -ne $false) {
+    if ($null -eq $sourceDirty) {
         throw 'Apply остановлен: чистоту рабочего дерева хаба определить не удалось.'
     }
 }

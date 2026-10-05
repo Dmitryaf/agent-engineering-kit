@@ -14,7 +14,9 @@ param(
 
     [switch]$NoSeedProjectFiles,
 
-    [switch]$Apply
+    [switch]$Apply,
+
+    [switch]$AllowDirtySource
 )
 
 $ErrorActionPreference = 'Stop'
@@ -45,6 +47,8 @@ Agent Engineering Kit
                            Показать доступные изменения.
   .\ai-rules.ps1 update -ProjectRoot ПУТЬ -Apply
                            Применить показанные изменения.
+  .\ai-rules.ps1 update -ProjectRoot ПУТЬ -Apply -AllowDirtySource
+                           Явно применить локальный незакоммиченный снимок.
 
 Проверить
 
@@ -628,7 +632,8 @@ function Invoke-Update {
         Write-Host 'Просмотр построен по текущим файлам хаба и может включать'
         Write-Host 'изменения, которых ещё нет в указанном коммите.'
         Write-Host ''
-        Write-Host 'Применение через update -Apply заблокировано до очистки рабочего дерева.'
+        if ($AllowDirtySource) { Write-Host 'Явно разрешён локальный снимок: lock сохранит dirty=true; commit SHA не воспроизводит эти файлы.' }
+        else { Write-Host 'Применение через update -Apply заблокировано до очистки рабочего дерева.' }
     }
     else {
         Write-Host "Версия после обновления: $($hubState.Revision)"
@@ -640,7 +645,7 @@ function Invoke-Update {
         '-RevisionOverride', $hubState.Revision
     )
     if ($Accept) {
-        if ($hubState.Dirty) {
+        if ($hubState.Dirty -and -not $AllowDirtySource) {
             throw 'Для update -Apply рабочее дерево хаба должно быть чистым.'
         }
         $planArguments += '-FailOnConflict'
@@ -674,10 +679,9 @@ function Invoke-Update {
         [System.IO.File]::WriteAllText($temporaryManifestPath, $manifestJson, $utf8WithoutBom)
         Move-Item -LiteralPath $temporaryManifestPath -Destination $manifestPath -Force
 
-        $applyResult = Invoke-ChildScript -ScriptPath $syncScriptPath -Arguments @(
-            '-ProjectRoot', $ResolvedProjectRoot,
-            '-Mode', 'Apply'
-        ) -Capture
+        $applyArguments = @('-ProjectRoot', $ResolvedProjectRoot, '-Mode', 'Apply')
+        if ($AllowDirtySource) { $applyArguments += '-AllowDirtySource' }
+        $applyResult = Invoke-ChildScript -ScriptPath $syncScriptPath -Arguments $applyArguments -Capture
         Write-Host "`nПрименение:"
         Write-Host $applyResult.Output.TrimEnd()
         if ($applyResult.ExitCode -ne 0) {
@@ -694,7 +698,8 @@ function Invoke-Update {
         }
     }
 
-    Write-Host "`nВерсия закреплена, правила применены." -ForegroundColor Green
+    if ($hubState.Dirty) { Write-Host "`nЛокальный снимок применён; lock содержит dirty=true и хеши. Версия не воспроизводится только по SHA." }
+    else { Write-Host "`nВерсия закреплена, правила применены." -ForegroundColor Green }
     Write-Host "Проверьте изменения: git -C `"$ResolvedProjectRoot`" diff -- .ai-rules/manifest.json .ai-rules/lock.json .ai-rules/upstream"
 
     Write-Host "`nПроверка подключения:"
@@ -709,6 +714,7 @@ function Invoke-Update {
 
 try {
     $normalizedCommand = $Command.ToLowerInvariant()
+    if ($AllowDirtySource -and $normalizedCommand -ne 'update') { throw 'AllowDirtySource поддерживается только командой update.' }
     switch ($normalizedCommand) {
         'help' {
             Write-Help
