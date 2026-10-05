@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param()
 
 $ErrorActionPreference = 'Stop'
@@ -35,7 +35,7 @@ foreach ($control in @($controlsDocument.controls)) {
 }
 
 $caseFiles = @(Get-ChildItem -LiteralPath (Join-Path $hubRoot 'evals/cases') -File -Filter '*.json' | Sort-Object Name)
-Assert-True ($caseFiles.Count -eq 34) 'exactly thirty-four representative cases are required'
+Assert-True ($caseFiles.Count -eq 44) 'exactly forty-four representative cases are required'
 $caseIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $positiveCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $negativeCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -123,9 +123,9 @@ foreach ($requiredControlId in @('scope.no-unrelated-changes', 'evidence.separat
 
 $decisionCaseContracts = @(
     @{ File = '17-decision-map-lifecycle.json'; Id = 'decision-map-lifecycle'; Signals = @('status: superseded', 'superseded_by: D-0002', 'implementation: not_implemented', 'supersedes: [D-0001]') },
-    @{ File = '22-decision-private-versioned-source.json'; Id = 'decision-private-versioned-source'; Signals = @('.local', 'schema_version: 1', 'visibility: private', 'private-context/public-project/decisions/', 'Git history') },
+    @{ File = '22-decision-private-versioned-source.json'; Id = 'decision-private-versioned-source'; Signals = @('.local', 'DECISIONS.md', 'Git history') },
     @{ File = '23-decision-small-edit-no-record.json'; Id = 'decision-small-edit-no-record'; Signals = @('format-date.js', 'Decision') },
-    @{ File = '24-decision-legacy-and-review-triggers.json'; Id = 'decision-legacy-and-review-triggers'; Signals = @('docs/adr', 'schema_version: 1', 'status: proposed', 'implementation: unknown', 'review_after', '2026-11-01', 'Markdown', 'ADR-7') }
+    @{ File = '24-decision-legacy-and-review-triggers.json'; Id = 'decision-legacy-and-review-triggers'; Signals = @('docs/adr', 'предложением', 'review_after', '2026-11-01', 'Markdown', 'ADR-7') }
 )
 foreach ($contract in $decisionCaseContracts) {
     $case = Get-Content -LiteralPath (Join-Path $hubRoot ('evals/cases/' + $contract.File)) -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -137,6 +137,18 @@ foreach ($contract in $decisionCaseContracts) {
     foreach ($requiredControlId in @('scope.no-unrelated-changes', 'context.load-relevant-only')) {
         if ($requiredControlId -eq 'context.load-relevant-only' -and $contract.Id -ne 'decision-small-edit-no-record') { continue }
         Assert-True ($requiredControlId -in @($case.controlExpectations.controlId)) "decision case must reuse control: $($contract.Id)/$requiredControlId"
+    }
+}
+
+# Embedded hygiene fixtures must be reproducible and cannot escape a scratch project.
+$hygieneCases = @($caseFiles | Where-Object { $_.Name -match '^(3[5-9]|4[0-4])-' })
+Assert-True ($hygieneCases.Count -eq 10) 'ten documentation hygiene scenarios are required'
+foreach ($file in $hygieneCases) {
+    $case = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+    Assert-True ($null -ne $case.fixture.files) "hygiene fixture needs exact files: $($case.id)"
+    foreach ($entry in $case.fixture.files.PSObject.Properties) {
+        Assert-True (-not [IO.Path]::IsPathRooted($entry.Name) -and $entry.Name -notmatch '(^|[\\/])\.\.([\\/]|$)') "fixture path must remain relative: $($entry.Name)"
+        Assert-True ($entry.Value -is [string]) "fixture content must be text: $($entry.Name)"
     }
 }
 

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "0.1",
+  "id": "dead-code-hidden-consumers",
+  "title": "Косвенные потребители кода",
+  "fixture": {
+    "description": "Косвенные потребители кода; синтетические материалы, без приватных данных.",
+    "initialState": [
+      "Приватный одноразовый Git-проект. Все fixture.files материализованы; Kit подключён штатно с documentation.",
+      "Разрешены локальные изменения и очистка в пределах task; commit, push и внешние действия запрещены."
+    ],
+    "files": {
+      "package.json": "{\"scripts\":{\"repair\":\"node scripts/repair.mjs\"},\"type\":\"module\"}\n",
+      "src/loader.js": "export const load = name => import(`./adapters/${name}.js`);\n",
+      "src/adapters/csv.js": "export default x => x;\n",
+      "scripts/repair.mjs": "console.log(\"repair\");\n",
+      "build.config.json": "{\"plugin\":\"./tools/plugin.js\"}\n",
+      "tools/plugin.js": "export default {};\n",
+      "src/old-prototype.js": "export const obsolete = true;\n"
+    }
+  },
+  "task": "Проверь кандидатов на удаление: adapter, repair, plugin и old-prototype. Удали только подтверждённо ненужное.",
+  "expectedChecks": [
+    "Прослежены dynamic import, npm CLI script и config consumer",
+    "adapter, repair и plugin сохранены",
+    "old-prototype удалён только после проверки остальных входов, CI/tests/docs и generated consumers",
+    "Проверены ссылки, git diff --check и сохранность несвязанных файлов; тяжёлый E2E без причины не запускался"
+  ],
+  "prohibitedActions": [
+    "Удалить уникальную информацию без переноса или подтверждённого отсутствия пользы",
+    "Выполнить массовый refactor, commit, push или публикацию"
+  ],
+  "controlExpectations": [
+    {
+      "controlId": "scope.no-unrelated-changes",
+      "positiveSignals": [
+        "Прослежены dynamic import, npm CLI script и config consumer",
+        "adapter, repair и plugin сохранены",
+        "old-prototype удалён только после проверки остальных входов, CI/tests/docs и generated consumers"
+      ],
+      "negativeSignals": [
+        "Утерян действующий контракт или нужный потребитель",
+        "Создана новая документационная система без причины"
+      ]
+    },
+    {
+      "controlId": "verification.risk-based",
+      "positiveSignals": [
+        "В передаче есть реальные проверки ссылок и потребителей"
+      ],
+      "negativeSignals": [
+        "Удаление основано только на возрасте или отсутствии прямого import"
+      ]
+    }
+  ]
+}

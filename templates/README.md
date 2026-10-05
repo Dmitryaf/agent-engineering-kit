@@ -32,8 +32,8 @@
 - [`PROJECT_RULES.full.md`](PROJECT_RULES.full.md) — подробная карта правил проекта;
 - [`PRODUCT.md`](PRODUCT.md) — описание продукта;
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — описание архитектуры;
-- [`DECISION.md`](DECISION.md) — новая запись значимого решения с YAML front matter версии 1;
-- [`DECISIONS.md`](DECISIONS.md) — компактный индекс; для новой полноценной карты рекомендуются `DECISIONS.md` и `decisions/D-0001-<short-name>.md` по [правилу документации](../rules/DOCUMENTATION.md#карта-значимых-решений), без обязательной миграции старых записей;
+- [`DECISION.md`](DECISION.md) — необязательный подробный ADR с совместимым YAML front matter версии 1;
+- [`DECISIONS.md`](DECISIONS.md) — короткая карта действующих решений в одном файле по [правилу документации](../rules/DOCUMENTATION.md#карта-значимых-решений), без обязательной миграции старых записей;
 - [`RESEARCH.md`](RESEARCH.md) — проверяемое исследование;
 - [`PROJECT_KNOWLEDGE.md`](PROJECT_KNOWLEDGE.md) — устойчивые знания о проекте;
 - [`SESSION_CONTEXT.md`](SESSION_CONTEXT.md) — временная передача контекста.

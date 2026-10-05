@@ -72,7 +72,7 @@ To learn how a project works through code walkthroughs and practical checks:
 .\ai-rules.ps1 prompt study -ProjectRoot C:\path\to\project
 ```
 
-Study sessions track explored areas and demonstrated understanding separately. Significant decisions are maintained as a regular project practice, with a map linking to their rationale and implementation evidence.
+Study sessions track explored areas and demonstrated understanding separately. Significant decisions are maintained as a regular project practice, with a short, readable map of current choices and their reasons. Temporary audits, research and delivery evidence live separately and are reviewed when the work ends.
 
 For a large task with independent parts, generate a prompt for Codex:
 
