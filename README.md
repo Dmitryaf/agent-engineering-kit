@@ -58,6 +58,8 @@ For a new product, start with a small architecture before implementing its first
 
 Paste the prompt with your goal and first scenario. The agent chooses where code belongs, creates only the needed parts, and checks the important dependency boundaries. Connecting an existing project does not restructure its code.
 
+For substantial new UI or a visual redesign, ask the agent to choose a visual direction before implementation: product context, references, distinct options, then a short design contract. Small fixes and features within an established design system do not restart discovery; connecting the kit does not redesign existing projects.
+
 For a deep project audit later, generate a dedicated prompt:
 
 ```powershell
@@ -99,6 +101,8 @@ Initial `connect` and `init` create the local setup, including public-profile ex
 ## Kit development
 
 The architecture and low-level commands are documented in [`hub/ARCHITECTURE.md`](hub/ARCHITECTURE.md) and [`sync/README.md`](sync/README.md). Contribution and security guidance is available in [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`.github/SECURITY.md`](.github/SECURITY.md).
+
+[Visual Design Discovery](workflows/VISUAL_DESIGN_DISCOVERY.md) can be read directly from the hub or explicitly selected with `-Topics visual-design-discovery`.
 
 The verified minimum environment is Git with Windows PowerShell 5.1. Automated checks also cover `pwsh` on Windows and, experimentally, on Ubuntu. Linux support is not yet declared.
 

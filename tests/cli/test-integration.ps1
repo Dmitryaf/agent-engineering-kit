@@ -556,6 +556,7 @@ try {
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $upstreamRoot 'workflows/PROJECT_DEEP_AUDIT.md'))) -Message 'sync must not copy project-audit without an explicit selection'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $upstreamRoot 'workflows/PARALLEL_DELIVERY.md'))) -Message 'sync must not copy parallel-delivery without an explicit selection'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $upstreamRoot 'workflows/PROJECT_BOOTSTRAP.md'))) -Message 'standard-product sync must not copy bootstrap without explicit selection'
+    Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $upstreamRoot 'workflows/VISUAL_DESIGN_DISCOVERY.md'))) -Message 'standard-product must not install discovery for ordinary feature work'
     Assert-True -Condition (Test-Path -LiteralPath (Join-Path $upstreamRoot 'rules/RELIABILITY_AND_OPERATIONS.md')) -Message 'sync must copy explicitly selected reliability topic'
     Assert-True -Condition (Test-Path -LiteralPath $lockPath) -Message 'apply must create lock'
     Assert-True -Condition ((Get-Content -LiteralPath (Join-Path $projectRoot 'AGENTS.md') -Raw -Encoding UTF8).Trim() -eq '# Local agent rules') -Message 'apply must not overwrite local AGENTS.md'
@@ -778,7 +779,7 @@ try {
     $existingAppPath = Join-Path $updateProjectRoot 'src/App.vue'
     [System.IO.File]::WriteAllText($existingAppPath, '<template>Existing application</template>', (New-Object System.Text.UTF8Encoding($false)))
     $existingSourceSnapshot = Get-TreeSnapshot -Root (Join-Path $updateProjectRoot 'src')
-    $cleanInit = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('init', '-ProjectRoot', $updateProjectRoot, '-Profiles', 'standard-product,learning-project', '-Topics', 'project-study,project-audit,parallel-delivery,project-bootstrap')
+    $cleanInit = Invoke-HubScript -ScriptPath $cleanCliPath -Arguments @('init', '-ProjectRoot', $updateProjectRoot, '-Profiles', 'standard-product,learning-project', '-Topics', 'project-study,project-audit,parallel-delivery,project-bootstrap,visual-design-discovery')
     Assert-True -Condition ($cleanInit.ExitCode -eq 0) -Message "clean CLI init must pass: $($cleanInit.Output)"
     $updateManifestPath = Join-Path $updateProjectRoot '.ai-rules/manifest.json'
     $renamedSourceManifest = Get-Content -LiteralPath $updateManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -792,8 +793,11 @@ try {
     $managedBootstrapPath = Join-Path $updateProjectRoot '.ai-rules/upstream/workflows/PROJECT_BOOTSTRAP.md'
     Assert-True -Condition ((Test-Path -LiteralPath $managedBootstrapPath) -and (Get-NormalizedSha256 -Path $managedBootstrapPath) -eq (Get-NormalizedSha256 -Path (Join-Path $cleanHubRoot 'workflows/PROJECT_BOOTSTRAP.md'))) -Message 'explicit bootstrap selection must copy the exact workflow through normal synchronization'
     $bootstrapIndex = Get-Content -LiteralPath (Join-Path $updateProjectRoot '.ai-rules/upstream/INDEX.md') -Raw -Encoding UTF8
+    $managedDiscoveryPath = Join-Path $updateProjectRoot '.ai-rules/upstream/workflows/VISUAL_DESIGN_DISCOVERY.md'
+    Assert-True -Condition ((Test-Path -LiteralPath $managedDiscoveryPath) -and (Get-NormalizedSha256 -Path $managedDiscoveryPath) -eq (Get-NormalizedSha256 -Path (Join-Path $cleanHubRoot 'workflows/VISUAL_DESIGN_DISCOVERY.md'))) -Message 'explicit discovery selection must synchronize the exact workflow'
+    Assert-True -Condition ($bootstrapIndex -match 'visual-design-discovery' -and $bootstrapIndex -match 'workflows/VISUAL_DESIGN_DISCOVERY\.md' -and $bootstrapIndex.Contains([string]$catalog.topics.'visual-design-discovery'.readWhen)) -Message 'selected discovery must be reachable through the generated conditional index'
     Assert-True -Condition ($bootstrapIndex -match 'project-bootstrap' -and $bootstrapIndex -match 'workflows/PROJECT_BOOTSTRAP\.md' -and $bootstrapIndex.Contains([string]$catalog.topics.'project-bootstrap'.readWhen)) -Message 'selected bootstrap must be discoverable with its conditional routing in the generated index'
-    Assert-True -Condition ((Get-TreeSnapshot -Root (Join-Path $updateProjectRoot 'src')) -eq $existingSourceSnapshot -and -not (Test-Path -LiteralPath (Join-Path $updateProjectRoot 'scripts'))) -Message 'init and update with bootstrap must preserve existing application code and must not generate guards or refactor it'
+    Assert-True -Condition ((Get-TreeSnapshot -Root (Join-Path $updateProjectRoot 'src')) -eq $existingSourceSnapshot -and -not (Test-Path -LiteralPath (Join-Path $updateProjectRoot 'scripts'))) -Message 'init and update with bootstrap and discovery must preserve existing application code without guards, refactoring or redesign'
     Assert-True -Condition ((Get-NormalizedSha256 -Path (Join-Path $updateProjectRoot 'AGENTS.md')) -eq (Get-NormalizedSha256 -Path (Join-Path $cleanHubRoot 'templates/AGENTS.md')) -and (Get-NormalizedSha256 -Path (Join-Path $updateProjectRoot '.ai-rules/PROJECT_RULES.md')) -eq (Get-NormalizedSha256 -Path (Join-Path $cleanHubRoot 'templates/PROJECT_RULES.md'))) -Message 'initial connection must seed updated local routing templates without managed copies of project architecture'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $updateProjectRoot '.ai-rules/upstream/rules/RELIABILITY_AND_OPERATIONS.md'))) -Message 'project-study selection must not pull reliability implicitly'
 

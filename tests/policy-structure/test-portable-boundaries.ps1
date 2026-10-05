@@ -20,6 +20,7 @@ if (Test-Path -LiteralPath (Join-Path $hubRoot 'templates/PROJECT_CONNECT_PROMPT
 if ([string]$catalog.topics.'project-study'.file -ne 'workflows/PROJECT_STUDY.md') { throw 'Compatible project-study ID must route to the workflow.' }
 if ([string]$catalog.topics.'project-audit'.file -ne 'workflows/PROJECT_DEEP_AUDIT.md') { throw 'Project-audit ID must route to the deep-audit workflow.' }
 if ([string]$catalog.topics.'parallel-delivery'.file -ne 'workflows/PARALLEL_DELIVERY.md' -or [string]$catalog.topics.'parallel-delivery'.kind -ne 'workflow') { throw 'Parallel-delivery ID must route to the task workflow.' }
+if ([string]$catalog.topics.'visual-design-discovery'.file -ne 'workflows/VISUAL_DESIGN_DISCOVERY.md' -or [string]$catalog.topics.'visual-design-discovery'.kind -ne 'workflow') { throw 'Visual discovery must remain a task workflow, not a permanent topic rule.' }
 foreach ($profile in $catalog.profiles.PSObject.Properties) {
     foreach ($topic in @($profile.Value.topics)) {
         if ([string]$catalog.topics.$topic.kind -eq 'workflow') { throw "Profile must not select a workflow automatically: $($profile.Name) -> $topic" }
@@ -33,4 +34,4 @@ if ($quality -notmatch 'ожидание `expect` < лимит теста < ли
 if ($learningProfile -notmatch 'устойчивой частью' -or $learningProfile -notmatch 'разового изучения') { throw 'Learning profile must describe a stable project property rather than a task workflow.' }
 if ($readme -match '## Detailed connection workflow|## Synchronization states|## Repository structure') { throw 'Public README must remain a short external entry point.' }
 
-Write-Host 'Portable boundary tests passed: 17 assertions.' -ForegroundColor Green
+Write-Host 'Portable boundary tests passed: 18 assertions.' -ForegroundColor Green
