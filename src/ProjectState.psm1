@@ -42,7 +42,8 @@ function Get-AiRulesProjectState {
         ProjectRules = Test-Path -LiteralPath $paths.ProjectRules -PathType Leaf
     }
 
-    $catalog = Get-AiRulesCatalog -HubRoot $hubRootFull
+    $catalog = $null
+    $catalogError = $null
     $hubState = Get-AiRulesHubGitState -HubRoot $hubRootFull
     $manifest = $null
     $manifestError = $null
@@ -73,15 +74,7 @@ function Get-AiRulesProjectState {
             if ($null -ne $manifest.PSObject.Properties['topics']) {
                 $directTopics = @($manifest.topics | ForEach-Object { [string]$_ })
             }
-            $effectiveTopics = @(Get-AiRulesEffectiveTopics -Catalog $catalog -SelectedProfiles $profiles -SelectedTopics $directTopics)
             if ($manifestContractValid) {
-                try {
-                    Assert-AiRulesSelections -Catalog $catalog -SelectedProfiles $profiles -SelectedTopics $directTopics
-                    $selectionsValid = $true
-                }
-                catch {
-                    $selectionError = $_.Exception.Message
-                }
                 if ($null -ne $manifest.source.revision) {
                     $manifestRevision = [string]$manifest.source.revision
                 }
@@ -117,13 +110,47 @@ function Get-AiRulesProjectState {
     }
 
     $revisionRelation = $null
+    $lockDirty = $null -ne $lock -and $null -ne $lock.source -and $lock.source.dirty -eq $true
     if ($pinned) {
         $revisionRelation = Get-AiRulesRevisionRelation -HubRoot $hubRootFull -ProjectRevision $manifestRevision -HubRevision $hubState.Revision
+        if (-not $lockDirty -or $revisionRelation.Relation -ne 'same') {
+            try {
+                if ($lockDirty) {
+                    throw 'Каталог sync/catalog.json локального снимка dirty нельзя восстановить только по базовому Git SHA.'
+                }
+                $catalog = Get-AiRulesCatalog -HubRoot $hubRootFull -Revision $manifestRevision
+            }
+            catch {
+                $catalog = $null
+                $catalogError = $_.Exception.Message
+            }
+        }
+        else {
+            $catalog = Get-AiRulesCatalog -HubRoot $hubRootFull
+        }
+    }
+    else {
+        $catalog = Get-AiRulesCatalog -HubRoot $hubRootFull
+    }
+
+    if ($manifestContractValid -and $null -ne $catalog) {
+        try {
+            Assert-AiRulesSelections -Catalog $catalog -SelectedProfiles $profiles -SelectedTopics $directTopics
+            $selectionsValid = $true
+            $effectiveTopics = @(Get-AiRulesEffectiveTopics -Catalog $catalog -SelectedProfiles $profiles -SelectedTopics $directTopics)
+        }
+        catch {
+            $selectionError = $_.Exception.Message
+        }
     }
 
     $syncPlan = $null
     $syncPlanError = $null
-    $canBuildPlan = $manifestContractValid -and $selectionsValid -and (-not $pinned -or $revisionRelation.Relation -eq 'same')
+    $syncPlanSkippedReason = $null
+    if ($pinned -and $selectionsValid -and -not $lockDirty -and $hubState.Dirty -and $revisionRelation.Relation -eq 'same') {
+        $syncPlanSkippedReason = 'Checkout хаба изменён: сравнение с его текущими файлами пропущено. Установленный чистый снимок проверен по закреплённому каталогу и lock.json.'
+    }
+    $canBuildPlan = $manifestContractValid -and $selectionsValid -and [string]::IsNullOrWhiteSpace($syncPlanSkippedReason) -and (-not $pinned -or $revisionRelation.Relation -eq 'same')
     if ($canBuildPlan) {
         try {
             $syncPlan = Get-AiRulesSyncPlan -HubRoot $hubRootFull -ProjectRoot $projectRootFull
@@ -144,6 +171,7 @@ function Get-AiRulesProjectState {
         ProjectName = Split-Path -Leaf $projectRootFull.TrimEnd([char[]]@('\', '/'))
         HubRoot = $hubRootFull
         Catalog = $catalog
+        CatalogError = $catalogError
         HubState = $hubState
         Paths = $paths
         Found = $found
@@ -164,6 +192,7 @@ function Get-AiRulesProjectState {
         RevisionRelation = $revisionRelation
         SyncPlan = $syncPlan
         SyncPlanError = $syncPlanError
+        SyncPlanSkippedReason = $syncPlanSkippedReason
     }
 }
 

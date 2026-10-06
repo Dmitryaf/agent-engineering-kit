@@ -7,6 +7,7 @@ $suites = @(
     'contracts/test-contracts.ps1',
     'sync/test-sync-plan.ps1',
     'diagnostics/test-project-state.ps1',
+    'diagnostics/test-historical-catalog.ps1',
     'policy-structure/test-module-boundaries.ps1',
     'policy-structure/test-portable-boundaries.ps1',
     'policy-structure/test-evals.ps1',

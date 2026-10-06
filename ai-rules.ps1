@@ -322,13 +322,18 @@ function Invoke-ProjectDoctor {
             else {
                 $manifestValid = $true
                 Add-DoctorResult -Level 'OK' -Message '.ai-rules/manifest.json заполнен корректно.' -Errors $errors -Warnings $warnings
-                try {
-                    Assert-AiRulesSelections -Catalog $catalog -SelectedProfiles @($manifest.profiles) -SelectedTopics @($manifest.topics)
-                    $selectionsValid = $true
-                    Add-DoctorResult -Level 'OK' -Message 'Все профили и темы известны хабу.' -Errors $errors -Warnings $warnings
+                if (-not [string]::IsNullOrWhiteSpace($projectState.CatalogError)) {
+                    Add-DoctorResult -Level 'WARN' -Message "Состав закреплённого каталога не проверен: $($projectState.CatalogError)" -Errors $errors -Warnings $warnings
                 }
-                catch {
-                    Add-DoctorResult -Level 'ERROR' -Message $_.Exception.Message -Errors $errors -Warnings $warnings
+                else {
+                    try {
+                        Assert-AiRulesSelections -Catalog $catalog -SelectedProfiles @($manifest.profiles) -SelectedTopics @($manifest.topics)
+                        $selectionsValid = $true
+                        Add-DoctorResult -Level 'OK' -Message 'Все профили и темы известны каталогу выбранной версии.' -Errors $errors -Warnings $warnings
+                    }
+                    catch {
+                        Add-DoctorResult -Level 'ERROR' -Message $_.Exception.Message -Errors $errors -Warnings $warnings
+                    }
                 }
 
                 if ($null -ne $manifest.source.revision) {
@@ -411,10 +416,12 @@ function Invoke-ProjectDoctor {
         else {
             Add-DoctorResult -Level 'ERROR' -Message 'Версии в manifest.json и lock.json не совпадают.' -Errors $errors -Warnings $warnings
         }
-        $expectedTopics = @(Get-AiRulesEffectiveTopics -Catalog $catalog -SelectedProfiles @($manifest.profiles) -SelectedTopics @($manifest.topics) | Sort-Object -Unique)
-        $lockTopics = @($lock.topics | ForEach-Object { [string]$_ } | Sort-Object -Unique)
-        if (($expectedTopics -join "`n") -ne ($lockTopics -join "`n")) {
-            Add-DoctorResult -Level 'ERROR' -Message 'Итоговые темы в manifest.json и lock.json не совпадают.' -Errors $errors -Warnings $warnings
+        if ($selectionsValid) {
+            $expectedTopics = @($projectState.EffectiveTopics | Sort-Object -Unique)
+            $lockTopics = @($lock.topics | ForEach-Object { [string]$_ } | Sort-Object -Unique)
+            if (($expectedTopics -join "`n") -ne ($lockTopics -join "`n")) {
+                Add-DoctorResult -Level 'ERROR' -Message 'Итоговые темы в manifest.json и lock.json не совпадают.' -Errors $errors -Warnings $warnings
+            }
         }
         $expectedProfiles = @($manifest.profiles | ForEach-Object { [string]$_ } | Sort-Object -Unique)
         $lockProfiles = @($lock.profiles | ForEach-Object { [string]$_ } | Sort-Object -Unique)
@@ -491,8 +498,11 @@ function Invoke-ProjectDoctor {
         }
     }
 
-    if ($manifestValid -and $selectionsValid) {
-        $canRunPlan = $true
+    if ($manifestValid) {
+        $canRunPlan = $selectionsValid -and [string]::IsNullOrWhiteSpace($projectState.SyncPlanSkippedReason)
+        if (-not [string]::IsNullOrWhiteSpace($projectState.SyncPlanSkippedReason)) {
+            Add-DoctorResult -Level 'WARN' -Message $projectState.SyncPlanSkippedReason -Errors $errors -Warnings $warnings
+        }
         if ($pinned) {
             try {
                 $revisionRelation = $projectState.RevisionRelation

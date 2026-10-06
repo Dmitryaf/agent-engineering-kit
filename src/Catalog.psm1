@@ -1,11 +1,27 @@
 ﻿function Get-AiRulesCatalog {
-    param([Parameter(Mandatory = $true)][string]$HubRoot)
+    param(
+        [Parameter(Mandatory = $true)][string]$HubRoot,
+        [string]$Revision
+    )
 
     $catalogPath = Join-Path $HubRoot 'sync/catalog.json'
+    if (-not [string]::IsNullOrWhiteSpace($Revision) -and $Revision -notmatch '^[0-9a-fA-F]{40}$') {
+        throw 'Версия каталога должна быть полным 40-символьным Git SHA.'
+    }
     try {
-        $catalog = Get-Content -LiteralPath $catalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ([string]::IsNullOrWhiteSpace($Revision)) {
+            $content = Get-Content -LiteralPath $catalogPath -Raw -Encoding UTF8
+        }
+        else {
+            Import-Module (Join-Path $PSScriptRoot 'GitState.psm1') -ErrorAction Stop
+            $content = @(Invoke-AiRulesGitText -Arguments @('-C', $HubRoot, 'show', ($Revision + ':sync/catalog.json'))) -join "`n"
+        }
+        $catalog = $content | ConvertFrom-Json
     }
     catch {
+        if (-not [string]::IsNullOrWhiteSpace($Revision)) {
+            throw ("Каталог sync/catalog.json версии {0} недоступен или некорректен: {1}" -f $Revision, $_.Exception.Message)
+        }
         throw ("Некорректный JSON в {0}: {1}" -f $catalogPath, $_.Exception.Message)
     }
     if ($catalog.schemaVersion -ne '0.1') {

@@ -163,6 +163,7 @@ function Get-AiRulesStatusAssessment {
 
     $diagnostics = [System.Collections.Generic.List[string]]::new()
     $warnings = [System.Collections.Generic.List[string]]::new()
+    $catalogError = if ($null -ne $ProjectState.PSObject.Properties['CatalogError']) { [string]$ProjectState.CatalogError } else { $null }
     if (-not $ProjectState.Found.Manifest) {
         return [pscustomobject]@{ State = 'not-initialized'; Diagnostics = @('сначала инициализируйте подключение проекта.'); Warnings = @() }
     }
@@ -194,7 +195,7 @@ function Get-AiRulesStatusAssessment {
             if ([string]$lock.manifest -ne '.ai-rules/manifest.json') { $diagnostics.Add('путь manifest в lock.json противоречит контракту.') }
             if ([string]$lock.managedRoot -ne '.ai-rules/upstream') { $diagnostics.Add('поле managedRoot в lock.json противоречит контракту.') }
             $lockTopics = @($lock.topics | ForEach-Object { [string]$_ } | Sort-Object -Unique)
-            if ((@($ProjectState.EffectiveTopics | Sort-Object -Unique) -join "`n") -ne ($lockTopics -join "`n")) { $diagnostics.Add('итоговые темы в manifest.json и lock.json не совпадают.') }
+            if ([string]::IsNullOrWhiteSpace($catalogError) -and (@($ProjectState.EffectiveTopics | Sort-Object -Unique) -join "`n") -ne ($lockTopics -join "`n")) { $diagnostics.Add('итоговые темы в manifest.json и lock.json не совпадают.') }
             $lockProfiles = @($lock.profiles | ForEach-Object { [string]$_ } | Sort-Object -Unique)
             if ((@($ProjectState.Profiles | Sort-Object -Unique) -join "`n") -ne ($lockProfiles -join "`n")) { $diagnostics.Add('профили в manifest.json и lock.json не совпадают.') }
             if ($ProjectState.LockContractValid) {
@@ -232,11 +233,18 @@ function Get-AiRulesStatusAssessment {
         return [pscustomobject]@{ State = 'inconsistent'; Diagnostics = @($diagnostics); Warnings = @($warnings) }
     }
 
+    if (-not [string]::IsNullOrWhiteSpace($catalogError)) {
+        return [pscustomobject]@{ State = 'checkout-mismatch'; Diagnostics = @("Состав правил закреплённой версии не проверен. $catalogError"); Warnings = @($warnings) }
+    }
     switch ($ProjectState.RevisionRelation.Relation) {
         'ahead' { return [pscustomobject]@{ State = 'update-available'; Diagnostics = @('в локальной копии хаба есть более новая версия правил.'); Warnings = @($warnings) } }
         'behind' { return [pscustomobject]@{ State = 'checkout-older'; Diagnostics = @('локальная копия хаба старее версии проекта; update -Apply предложит откат.'); Warnings = @($warnings) } }
         'diverged' { return [pscustomobject]@{ State = 'checkout-diverged'; Diagnostics = @('версии проекта и хаба находятся в разных ветках истории.'); Warnings = @($warnings) } }
         'unavailable' { return [pscustomobject]@{ State = 'checkout-mismatch'; Diagnostics = @("сравнить версии не удалось. $($ProjectState.RevisionRelation.Detail)"); Warnings = @($warnings) } }
+    }
+    if (-not [string]::IsNullOrWhiteSpace($ProjectState.SyncPlanSkippedReason)) {
+        $warnings.Add([string]$ProjectState.SyncPlanSkippedReason)
+        return [pscustomobject]@{ State = 'synchronized'; Diagnostics = @(); Warnings = @($warnings) }
     }
     if (-not [string]::IsNullOrWhiteSpace($ProjectState.SyncPlanError)) {
         return [pscustomobject]@{ State = 'inconsistent'; Diagnostics = @('не удалось подготовить план синхронизации.', $ProjectState.SyncPlanError); Warnings = @($warnings) }
