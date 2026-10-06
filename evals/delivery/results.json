@@ -1,0 +1,551 @@
+{
+  "schemaVersion": "0.1",
+  "canonicalRevision": "3d0987449f3a50a363b3de7b44d8a30d7924d650",
+  "reviewMethod": "Manual inspection of command outputs and final responses by implementation agents; owner review remains separate.",
+  "causalClaim": "none",
+  "nativeDiscoveryMetadata": "unknown",
+  "notes": [
+    "Earlier unsupported-model and unconstrained-read failures remain private and are described in RESULTS.md.",
+    "Canonical parity verified before each attempt; shared builder digest changed only after the observed competing audit route was fixed.",
+    "Initial controlled audit read Skill body and plain canonical workflow; final paired audit read the Skill bundled workflow reference.",
+    "Workflow report contract is only partially reflected in the final answers.",
+    "Command counts include completed successful and failed command executions, excluding rejected attempts.",
+    "File inventories omit .git and mark directory links; target and integrity validation are separate checks."
+  ],
+  "batches": [
+    {
+      "id": "20261006T175126Z-d5059da1",
+      "releaseId": "r-3d0987449f3a-ae6b718545ea3365e918",
+      "releaseDigest": "ae6b718545ea3365e91825524ac1e30f4f9c8449c513266de47cc54ae459e5fd",
+      "runnerSha256": "e82690328ac65a9dba20db84191bb226ab00b119464727f50c34c08b897f439e",
+      "cliVersion": "codex-cli 0.158.0",
+      "configuredScalars": {
+        "model": "gpt-6-sol",
+        "model_reasoning_effort": "xhigh"
+      },
+      "readingConstraint": "identical explicit single-command rg read constraint in every paired task",
+      "scenarioFilter": null,
+      "observations": [
+        {
+          "scenario": "permanent-rule-and-local-context",
+          "mode": "snapshot",
+          "taskSha256": "441a689073f0e0b2d57934fcc21062bcab405b708355f201328ff4e2ac0f9260",
+          "fixtureSha256": "51ec91b3ba4bd468e9609843d07bef1f0b9bc2c438edf64c88eaa78ff669c255",
+          "canonicalFiles": [
+            {
+              "path": "profiles/standard-product.md",
+              "sha256": "19efff19174dbe51b828f553e6e6e9172bf81436d0a42798046b42c20d7eacf7"
+            },
+            {
+              "path": "rules/ARCHITECTURE_AND_DATA.md",
+              "sha256": "92a0a30070054862111793d6919de5cdb1399178318ecbff5f62e78470a09d17"
+            },
+            {
+              "path": "rules/CORE.md",
+              "sha256": "c7cb1bac775fc46bb08d6855e9b7375df2702043e3a3cc76a22f4a191853a059"
+            },
+            {
+              "path": "rules/DOCUMENTATION.md",
+              "sha256": "08969dba4a071867d312424cd7659d1e9feb34131191fa6ac6cf0e5461eba942"
+            },
+            {
+              "path": "rules/GIT_AND_DELIVERY.md",
+              "sha256": "accbd8eea6ce0fcb6d57ad3c72eced32dda3bb42e2550f381776ce90c9701eac"
+            },
+            {
+              "path": "rules/IMPLEMENTATION.md",
+              "sha256": "a077007107b4e2f4d528e8a03c5928e276de86a0c18d21bc40338d5e866c6d58"
+            },
+            {
+              "path": "rules/PRODUCT.md",
+              "sha256": "824d22e7e283eeca8c28d2a6969c532627d2cbe0f8fd57edd84b688581ecbbbe"
+            },
+            {
+              "path": "rules/QUALITY.md",
+              "sha256": "2fcf323156138566b70c49237a2802ce4bdbdcc7a6ebbaecd8a566936f889593"
+            },
+            {
+              "path": "rules/SECURITY_AND_PRIVACY.md",
+              "sha256": "6088d019fafaf1eabc09fb5d7806fe73dc4ca698c97b26f5b1fde3e4a38b1cca"
+            }
+          ],
+          "localContextSha256": "93d4dc01b1e112a345930be7f321f31466ecd82b725efe448705a540dbbf8d16",
+          "projectUnchanged": true,
+          "exitCode": 0,
+          "turnFailureObserved": false,
+          "elapsedMs": 70816,
+          "commandCount": 13,
+          "usage": {
+            "input_tokens": 327714,
+            "cached_input_tokens": 303744,
+            "output_tokens": 3681
+          },
+          "eventsSha256": "3cd2f1e5d7281b0ef5f32f471b27c40116ce331c98ddb4d7c05f09e093bd4d25",
+          "finalSha256": "57fba3533d8afc7e245bdabbf597019d042cfd34988cdf5aa7811e5a2ffc8040",
+          "actualModel": null
+        },
+        {
+          "scenario": "permanent-rule-and-local-context",
+          "mode": "shared",
+          "taskSha256": "441a689073f0e0b2d57934fcc21062bcab405b708355f201328ff4e2ac0f9260",
+          "fixtureSha256": "51ec91b3ba4bd468e9609843d07bef1f0b9bc2c438edf64c88eaa78ff669c255",
+          "canonicalFiles": [
+            {
+              "path": "profiles/standard-product.md",
+              "sha256": "19efff19174dbe51b828f553e6e6e9172bf81436d0a42798046b42c20d7eacf7"
+            },
+            {
+              "path": "rules/ARCHITECTURE_AND_DATA.md",
+              "sha256": "92a0a30070054862111793d6919de5cdb1399178318ecbff5f62e78470a09d17"
+            },
+            {
+              "path": "rules/CORE.md",
+              "sha256": "c7cb1bac775fc46bb08d6855e9b7375df2702043e3a3cc76a22f4a191853a059"
+            },
+            {
+              "path": "rules/DOCUMENTATION.md",
+              "sha256": "08969dba4a071867d312424cd7659d1e9feb34131191fa6ac6cf0e5461eba942"
+            },
+            {
+              "path": "rules/GIT_AND_DELIVERY.md",
+              "sha256": "accbd8eea6ce0fcb6d57ad3c72eced32dda3bb42e2550f381776ce90c9701eac"
+            },
+            {
+              "path": "rules/IMPLEMENTATION.md",
+              "sha256": "a077007107b4e2f4d528e8a03c5928e276de86a0c18d21bc40338d5e866c6d58"
+            },
+            {
+              "path": "rules/PRODUCT.md",
+              "sha256": "824d22e7e283eeca8c28d2a6969c532627d2cbe0f8fd57edd84b688581ecbbbe"
+            },
+            {
+              "path": "rules/QUALITY.md",
+              "sha256": "2fcf323156138566b70c49237a2802ce4bdbdcc7a6ebbaecd8a566936f889593"
+            },
+            {
+              "path": "rules/SECURITY_AND_PRIVACY.md",
+              "sha256": "6088d019fafaf1eabc09fb5d7806fe73dc4ca698c97b26f5b1fde3e4a38b1cca"
+            }
+          ],
+          "localContextSha256": "93d4dc01b1e112a345930be7f321f31466ecd82b725efe448705a540dbbf8d16",
+          "projectUnchanged": true,
+          "exitCode": 0,
+          "turnFailureObserved": false,
+          "elapsedMs": 33896,
+          "commandCount": 8,
+          "usage": {
+            "input_tokens": 81953,
+            "cached_input_tokens": 57344,
+            "output_tokens": 1779
+          },
+          "eventsSha256": "d98badb84b53d81dab412b5dd2a7f7d8eff81616cc56d65e10ace3df8bb6c241",
+          "finalSha256": "ce7cb47425b29994cc27e03063e236d0d5597e3a6fc89dc9807fc906dd50966b",
+          "actualModel": null
+        },
+        {
+          "scenario": "task-lazy-quality-and-research",
+          "mode": "shared",
+          "taskSha256": "1ca75de971e2321eddbea101157c5ab056d06716e66f7428d302c53ffaf1af1d",
+          "fixtureSha256": "51f2702083fda87e559a97dab0699542891669959a5115806fd8c2597f402249",
+          "canonicalFiles": [
+            {
+              "path": "profiles/standard-product.md",
+              "sha256": "19efff19174dbe51b828f553e6e6e9172bf81436d0a42798046b42c20d7eacf7"
+            },
+            {
+              "path": "rules/ARCHITECTURE_AND_DATA.md",
+              "sha256": "92a0a30070054862111793d6919de5cdb1399178318ecbff5f62e78470a09d17"
+            },
+            {
+              "path": "rules/CORE.md",
+              "sha256": "c7cb1bac775fc46bb08d6855e9b7375df2702043e3a3cc76a22f4a191853a059"
+            },
+            {
+              "path": "rules/DOCUMENTATION.md",
+              "sha256": "08969dba4a071867d312424cd7659d1e9feb34131191fa6ac6cf0e5461eba942"
+            },
+            {
+              "path": "rules/GIT_AND_DELIVERY.md",
+              "sha256": "accbd8eea6ce0fcb6d57ad3c72eced32dda3bb42e2550f381776ce90c9701eac"
+            },
+            {
+              "path": "rules/IMPLEMENTATION.md",
+              "sha256": "a077007107b4e2f4d528e8a03c5928e276de86a0c18d21bc40338d5e866c6d58"
+            },
+            {
+              "path": "rules/PRODUCT.md",
+              "sha256": "824d22e7e283eeca8c28d2a6969c532627d2cbe0f8fd57edd84b688581ecbbbe"
+            },
+            {
+              "path": "rules/QUALITY.md",
+              "sha256": "2fcf323156138566b70c49237a2802ce4bdbdcc7a6ebbaecd8a566936f889593"
+            },
+            {
+              "path": "rules/RESEARCH_AND_EVIDENCE.md",
+              "sha256": "7dfd467cd1508d38548a1c758c41feb4ca2a5b7ee442d9c9c413e2bf3dc40d35"
+            },
+            {
+              "path": "rules/SECURITY_AND_PRIVACY.md",
+              "sha256": "6088d019fafaf1eabc09fb5d7806fe73dc4ca698c97b26f5b1fde3e4a38b1cca"
+            }
+          ],
+          "localContextSha256": "19ab48c5c2060632c61ac1e1fad1c006dcf3c772e9d27f48bd969de58a9dd758",
+          "projectUnchanged": true,
+          "exitCode": 0,
+          "turnFailureObserved": false,
+          "elapsedMs": 56971,
+          "commandCount": 11,
+          "usage": {
+            "input_tokens": 82358,
+            "cached_input_tokens": 46464,
+            "output_tokens": 2477
+          },
+          "eventsSha256": "46c423b1a928f12c55929977cf74708723d8c6748fcb1f24949aa978097ea472",
+          "finalSha256": "464f5c85d516356a29eeadcca0b4fad70f4b96587202258a52ddbe671e9146c7",
+          "actualModel": null
+        },
+        {
+          "scenario": "task-lazy-quality-and-research",
+          "mode": "snapshot",
+          "taskSha256": "1ca75de971e2321eddbea101157c5ab056d06716e66f7428d302c53ffaf1af1d",
+          "fixtureSha256": "51f2702083fda87e559a97dab0699542891669959a5115806fd8c2597f402249",
+          "canonicalFiles": [
+            {
+              "path": "profiles/standard-product.md",
+              "sha256": "19efff19174dbe51b828f553e6e6e9172bf81436d0a42798046b42c20d7eacf7"
+            },
+            {
+              "path": "rules/ARCHITECTURE_AND_DATA.md",
+              "sha256": "92a0a30070054862111793d6919de5cdb1399178318ecbff5f62e78470a09d17"
+            },
+            {
+              "path": "rules/CORE.md",
+              "sha256": "c7cb1bac775fc46bb08d6855e9b7375df2702043e3a3cc76a22f4a191853a059"
+            },
+            {
+              "path": "rules/DOCUMENTATION.md",
+              "sha256": "08969dba4a071867d312424cd7659d1e9feb34131191fa6ac6cf0e5461eba942"
+            },
+            {
+              "path": "rules/GIT_AND_DELIVERY.md",
+              "sha256": "accbd8eea6ce0fcb6d57ad3c72eced32dda3bb42e2550f381776ce90c9701eac"
+            },
+            {
+              "path": "rules/IMPLEMENTATION.md",
+              "sha256": "a077007107b4e2f4d528e8a03c5928e276de86a0c18d21bc40338d5e866c6d58"
+            },
+            {
+              "path": "rules/PRODUCT.md",
+              "sha256": "824d22e7e283eeca8c28d2a6969c532627d2cbe0f8fd57edd84b688581ecbbbe"
+            },
+            {
+              "path": "rules/QUALITY.md",
+              "sha256": "2fcf323156138566b70c49237a2802ce4bdbdcc7a6ebbaecd8a566936f889593"
+            },
+            {
+              "path": "rules/RESEARCH_AND_EVIDENCE.md",
+              "sha256": "7dfd467cd1508d38548a1c758c41feb4ca2a5b7ee442d9c9c413e2bf3dc40d35"
+            },
+            {
+              "path": "rules/SECURITY_AND_PRIVACY.md",
+              "sha256": "6088d019fafaf1eabc09fb5d7806fe73dc4ca698c97b26f5b1fde3e4a38b1cca"
+            }
+          ],
+          "localContextSha256": "19ab48c5c2060632c61ac1e1fad1c006dcf3c772e9d27f48bd969de58a9dd758",
+          "projectUnchanged": true,
+          "exitCode": 0,
+          "turnFailureObserved": false,
+          "elapsedMs": 88651,
+          "commandCount": 14,
+          "usage": {
+            "input_tokens": 281618,
+            "cached_input_tokens": 246016,
+            "output_tokens": 3550
+          },
+          "eventsSha256": "235212f78121053a8764dfb1f340a4e226496299c01fa5dca798115a0e12cead",
+          "finalSha256": "f7d54f0004456318c5a0aaebfc1dc8c10ff430bbd185d080873ab79c0d52810e",
+          "actualModel": null
+        },
+        {
+          "scenario": "explicit-project-audit",
+          "mode": "snapshot",
+          "taskSha256": "5175555f52e9d9fe631baace655261cb5b5320f6852f99fdef982e5b49f32436",
+          "fixtureSha256": "95b903382faac3338336144154702f3f001e0e34b2fc673cda388bc69cd48df8",
+          "canonicalFiles": [
+            {
+              "path": "profiles/standard-product.md",
+              "sha256": "19efff19174dbe51b828f553e6e6e9172bf81436d0a42798046b42c20d7eacf7"
+            },
+            {
+              "path": "rules/ARCHITECTURE_AND_DATA.md",
+              "sha256": "92a0a30070054862111793d6919de5cdb1399178318ecbff5f62e78470a09d17"
+            },
+            {
+              "path": "rules/CORE.md",
+              "sha256": "c7cb1bac775fc46bb08d6855e9b7375df2702043e3a3cc76a22f4a191853a059"
+            },
+            {
+              "path": "rules/DOCUMENTATION.md",
+              "sha256": "08969dba4a071867d312424cd7659d1e9feb34131191fa6ac6cf0e5461eba942"
+            },
+            {
+              "path": "rules/GIT_AND_DELIVERY.md",
+              "sha256": "accbd8eea6ce0fcb6d57ad3c72eced32dda3bb42e2550f381776ce90c9701eac"
+            },
+            {
+              "path": "rules/IMPLEMENTATION.md",
+              "sha256": "a077007107b4e2f4d528e8a03c5928e276de86a0c18d21bc40338d5e866c6d58"
+            },
+            {
+              "path": "rules/PRODUCT.md",
+              "sha256": "824d22e7e283eeca8c28d2a6969c532627d2cbe0f8fd57edd84b688581ecbbbe"
+            },
+            {
+              "path": "rules/QUALITY.md",
+              "sha256": "2fcf323156138566b70c49237a2802ce4bdbdcc7a6ebbaecd8a566936f889593"
+            },
+            {
+              "path": "rules/RESEARCH_AND_EVIDENCE.md",
+              "sha256": "7dfd467cd1508d38548a1c758c41feb4ca2a5b7ee442d9c9c413e2bf3dc40d35"
+            },
+            {
+              "path": "rules/SECURITY_AND_PRIVACY.md",
+              "sha256": "6088d019fafaf1eabc09fb5d7806fe73dc4ca698c97b26f5b1fde3e4a38b1cca"
+            },
+            {
+              "path": "workflows/PROJECT_DEEP_AUDIT.md",
+              "sha256": "509dd36a4f40392940302c9d3be7932a9aff81ca51bfa111a185e6525ccf11cb"
+            }
+          ],
+          "localContextSha256": "21c14cbb7f34668caf3ca035351387c42e17886a10fe8186faeb03d04b77f454",
+          "projectUnchanged": true,
+          "exitCode": 0,
+          "turnFailureObserved": false,
+          "elapsedMs": 103931,
+          "commandCount": 17,
+          "usage": {
+            "input_tokens": 349173,
+            "cached_input_tokens": 300544,
+            "output_tokens": 5967
+          },
+          "eventsSha256": "aaf311f961157f8ded84da568a39ab1e3c727a0fd01c91a38af3ae32079d4c0a",
+          "finalSha256": "d432906a6e7298988c2926759d7147ab85c2b695f637b7c544b298e05a6e04ab",
+          "actualModel": null
+        },
+        {
+          "scenario": "explicit-project-audit",
+          "mode": "shared",
+          "taskSha256": "5175555f52e9d9fe631baace655261cb5b5320f6852f99fdef982e5b49f32436",
+          "fixtureSha256": "95b903382faac3338336144154702f3f001e0e34b2fc673cda388bc69cd48df8",
+          "canonicalFiles": [
+            {
+              "path": "profiles/standard-product.md",
+              "sha256": "19efff19174dbe51b828f553e6e6e9172bf81436d0a42798046b42c20d7eacf7"
+            },
+            {
+              "path": "rules/ARCHITECTURE_AND_DATA.md",
+              "sha256": "92a0a30070054862111793d6919de5cdb1399178318ecbff5f62e78470a09d17"
+            },
+            {
+              "path": "rules/CORE.md",
+              "sha256": "c7cb1bac775fc46bb08d6855e9b7375df2702043e3a3cc76a22f4a191853a059"
+            },
+            {
+              "path": "rules/DOCUMENTATION.md",
+              "sha256": "08969dba4a071867d312424cd7659d1e9feb34131191fa6ac6cf0e5461eba942"
+            },
+            {
+              "path": "rules/GIT_AND_DELIVERY.md",
+              "sha256": "accbd8eea6ce0fcb6d57ad3c72eced32dda3bb42e2550f381776ce90c9701eac"
+            },
+            {
+              "path": "rules/IMPLEMENTATION.md",
+              "sha256": "a077007107b4e2f4d528e8a03c5928e276de86a0c18d21bc40338d5e866c6d58"
+            },
+            {
+              "path": "rules/PRODUCT.md",
+              "sha256": "824d22e7e283eeca8c28d2a6969c532627d2cbe0f8fd57edd84b688581ecbbbe"
+            },
+            {
+              "path": "rules/QUALITY.md",
+              "sha256": "2fcf323156138566b70c49237a2802ce4bdbdcc7a6ebbaecd8a566936f889593"
+            },
+            {
+              "path": "rules/RESEARCH_AND_EVIDENCE.md",
+              "sha256": "7dfd467cd1508d38548a1c758c41feb4ca2a5b7ee442d9c9c413e2bf3dc40d35"
+            },
+            {
+              "path": "rules/SECURITY_AND_PRIVACY.md",
+              "sha256": "6088d019fafaf1eabc09fb5d7806fe73dc4ca698c97b26f5b1fde3e4a38b1cca"
+            },
+            {
+              "path": "workflows/PROJECT_DEEP_AUDIT.md",
+              "sha256": "509dd36a4f40392940302c9d3be7932a9aff81ca51bfa111a185e6525ccf11cb"
+            }
+          ],
+          "localContextSha256": "21c14cbb7f34668caf3ca035351387c42e17886a10fe8186faeb03d04b77f454",
+          "projectUnchanged": true,
+          "exitCode": 0,
+          "turnFailureObserved": false,
+          "elapsedMs": 127751,
+          "commandCount": 27,
+          "usage": {
+            "input_tokens": 432877,
+            "cached_input_tokens": 369280,
+            "output_tokens": 7750
+          },
+          "eventsSha256": "729519fbef77a6b6139a0e1faebad115a35b51c092439caa8c85b6f774487600",
+          "finalSha256": "dc16641ebd56f48a80bc129ee30d463382aea5715e989d420e457fb249ce5c7f",
+          "actualModel": null
+        }
+      ]
+    },
+    {
+      "id": "20261006T180435Z-4c892d40",
+      "releaseId": "r-3d0987449f3a-a7ce1334cb4568b83fb2",
+      "releaseDigest": "a7ce1334cb4568b83fb299cad61fc5b501df0bf02eafa0557006ead8e43507f2",
+      "runnerSha256": "68111f4b6b8846f6e5c1fe7c14de534ed04de28b6646c68cb108a59ac5cde076",
+      "cliVersion": "codex-cli 0.158.0",
+      "configuredScalars": {
+        "model": "gpt-6-sol",
+        "model_reasoning_effort": "xhigh"
+      },
+      "readingConstraint": "identical explicit single-command rg read constraint in every paired task",
+      "scenarioFilter": "explicit-project-audit",
+      "observations": [
+        {
+          "scenario": "explicit-project-audit",
+          "mode": "snapshot",
+          "taskSha256": "5175555f52e9d9fe631baace655261cb5b5320f6852f99fdef982e5b49f32436",
+          "fixtureSha256": "95b903382faac3338336144154702f3f001e0e34b2fc673cda388bc69cd48df8",
+          "canonicalFiles": [
+            {
+              "path": "profiles/standard-product.md",
+              "sha256": "19efff19174dbe51b828f553e6e6e9172bf81436d0a42798046b42c20d7eacf7"
+            },
+            {
+              "path": "rules/ARCHITECTURE_AND_DATA.md",
+              "sha256": "92a0a30070054862111793d6919de5cdb1399178318ecbff5f62e78470a09d17"
+            },
+            {
+              "path": "rules/CORE.md",
+              "sha256": "c7cb1bac775fc46bb08d6855e9b7375df2702043e3a3cc76a22f4a191853a059"
+            },
+            {
+              "path": "rules/DOCUMENTATION.md",
+              "sha256": "08969dba4a071867d312424cd7659d1e9feb34131191fa6ac6cf0e5461eba942"
+            },
+            {
+              "path": "rules/GIT_AND_DELIVERY.md",
+              "sha256": "accbd8eea6ce0fcb6d57ad3c72eced32dda3bb42e2550f381776ce90c9701eac"
+            },
+            {
+              "path": "rules/IMPLEMENTATION.md",
+              "sha256": "a077007107b4e2f4d528e8a03c5928e276de86a0c18d21bc40338d5e866c6d58"
+            },
+            {
+              "path": "rules/PRODUCT.md",
+              "sha256": "824d22e7e283eeca8c28d2a6969c532627d2cbe0f8fd57edd84b688581ecbbbe"
+            },
+            {
+              "path": "rules/QUALITY.md",
+              "sha256": "2fcf323156138566b70c49237a2802ce4bdbdcc7a6ebbaecd8a566936f889593"
+            },
+            {
+              "path": "rules/RESEARCH_AND_EVIDENCE.md",
+              "sha256": "7dfd467cd1508d38548a1c758c41feb4ca2a5b7ee442d9c9c413e2bf3dc40d35"
+            },
+            {
+              "path": "rules/SECURITY_AND_PRIVACY.md",
+              "sha256": "6088d019fafaf1eabc09fb5d7806fe73dc4ca698c97b26f5b1fde3e4a38b1cca"
+            },
+            {
+              "path": "workflows/PROJECT_DEEP_AUDIT.md",
+              "sha256": "509dd36a4f40392940302c9d3be7932a9aff81ca51bfa111a185e6525ccf11cb"
+            }
+          ],
+          "localContextSha256": "21c14cbb7f34668caf3ca035351387c42e17886a10fe8186faeb03d04b77f454",
+          "projectUnchanged": true,
+          "exitCode": 0,
+          "turnFailureObserved": false,
+          "elapsedMs": 108116,
+          "commandCount": 17,
+          "usage": {
+            "input_tokens": 877127,
+            "cached_input_tokens": 835712,
+            "output_tokens": 4811
+          },
+          "eventsSha256": "3c6a90792c3c1f5dc8ec520a9fa7a7dc1884ea04f0cd87b86427a3a597406cef",
+          "finalSha256": "b262f3e3a6b4261e0f1b5bc2a032674cb98691370fba8d998272dda824198024",
+          "actualModel": null
+        },
+        {
+          "scenario": "explicit-project-audit",
+          "mode": "shared",
+          "taskSha256": "5175555f52e9d9fe631baace655261cb5b5320f6852f99fdef982e5b49f32436",
+          "fixtureSha256": "95b903382faac3338336144154702f3f001e0e34b2fc673cda388bc69cd48df8",
+          "canonicalFiles": [
+            {
+              "path": "profiles/standard-product.md",
+              "sha256": "19efff19174dbe51b828f553e6e6e9172bf81436d0a42798046b42c20d7eacf7"
+            },
+            {
+              "path": "rules/ARCHITECTURE_AND_DATA.md",
+              "sha256": "92a0a30070054862111793d6919de5cdb1399178318ecbff5f62e78470a09d17"
+            },
+            {
+              "path": "rules/CORE.md",
+              "sha256": "c7cb1bac775fc46bb08d6855e9b7375df2702043e3a3cc76a22f4a191853a059"
+            },
+            {
+              "path": "rules/DOCUMENTATION.md",
+              "sha256": "08969dba4a071867d312424cd7659d1e9feb34131191fa6ac6cf0e5461eba942"
+            },
+            {
+              "path": "rules/GIT_AND_DELIVERY.md",
+              "sha256": "accbd8eea6ce0fcb6d57ad3c72eced32dda3bb42e2550f381776ce90c9701eac"
+            },
+            {
+              "path": "rules/IMPLEMENTATION.md",
+              "sha256": "a077007107b4e2f4d528e8a03c5928e276de86a0c18d21bc40338d5e866c6d58"
+            },
+            {
+              "path": "rules/PRODUCT.md",
+              "sha256": "824d22e7e283eeca8c28d2a6969c532627d2cbe0f8fd57edd84b688581ecbbbe"
+            },
+            {
+              "path": "rules/QUALITY.md",
+              "sha256": "2fcf323156138566b70c49237a2802ce4bdbdcc7a6ebbaecd8a566936f889593"
+            },
+            {
+              "path": "rules/RESEARCH_AND_EVIDENCE.md",
+              "sha256": "7dfd467cd1508d38548a1c758c41feb4ca2a5b7ee442d9c9c413e2bf3dc40d35"
+            },
+            {
+              "path": "rules/SECURITY_AND_PRIVACY.md",
+              "sha256": "6088d019fafaf1eabc09fb5d7806fe73dc4ca698c97b26f5b1fde3e4a38b1cca"
+            },
+            {
+              "path": "workflows/PROJECT_DEEP_AUDIT.md",
+              "sha256": "509dd36a4f40392940302c9d3be7932a9aff81ca51bfa111a185e6525ccf11cb"
+            }
+          ],
+          "localContextSha256": "21c14cbb7f34668caf3ca035351387c42e17886a10fe8186faeb03d04b77f454",
+          "projectUnchanged": true,
+          "exitCode": 0,
+          "turnFailureObserved": false,
+          "elapsedMs": 130765,
+          "commandCount": 30,
+          "usage": {
+            "input_tokens": 319964,
+            "cached_input_tokens": 283520,
+            "output_tokens": 8503
+          },
+          "eventsSha256": "7a93fe59ce33f22bef1c951f51413e03aa1118a3e9ced39d40c8533af3d73711",
+          "finalSha256": "df851c0512d0923f3c1ec87895b7cfbddc0c045b1a1627c78f7f0b160036832a",
+          "actualModel": null
+        }
+      ]
+    }
+  ]
+}

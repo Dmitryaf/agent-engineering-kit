@@ -12,7 +12,8 @@ $suites = @(
     'policy-structure/test-portable-boundaries.ps1',
     'policy-structure/test-evals.ps1',
     'cli/test-integration.ps1',
-    'cli/test-public-repository.ps1'
+    'cli/test-public-repository.ps1',
+    'cli/test-shared-install.ps1'
 )
 
 foreach ($suite in $suites) {

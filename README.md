@@ -100,6 +100,8 @@ Initial `connect` and `init` create the local setup, including public-profile ex
 
 ## Kit development
 
+An experimental shared installation for new Codex project connections is available in [Phase 1](hub/SHARED_INSTALL.md). The default snapshot path above remains supported.
+
 The architecture and low-level commands are documented in [`hub/ARCHITECTURE.md`](hub/ARCHITECTURE.md) and [`sync/README.md`](sync/README.md). Contribution and security guidance is available in [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`.github/SECURITY.md`](.github/SECURITY.md).
 
 [Visual Design Discovery](workflows/VISUAL_DESIGN_DISCOVERY.md) can be read directly from the hub or explicitly selected with `-Topics visual-design-discovery`.

@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "0.1",
+  "name": "aek-project-audit",
+  "topic": "project-audit",
+  "description": "Perform an explicitly requested, read-only deep project audit with structural inventory, system map, coverage and evidence. Do not use for ordinary edits or silently expand scope.",
+  "workflow": "workflows/PROJECT_DEEP_AUDIT.md"
+}
