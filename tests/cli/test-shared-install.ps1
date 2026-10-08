@@ -244,6 +244,15 @@ try {
     $overrideStatus = Get-AekSharedProjectStatus -ProjectRoot $publicRoot
     Assert-True (($overrideStatus.diagnostics -join '; ') -match 'exclusions.*ineffective') "public status must detect higher-priority Git ignore overrides; actual: $($overrideStatus | ConvertTo-Json -Compress)"
 
+    Write-FixtureText (Join-Path $publicRoot 'package.json') '{"scripts":{"format:check":"prettier --check ."}}'
+    $formatterSnapshot = Get-FixtureSnapshot $publicRoot
+    $formatterStatus = Get-AekSharedProjectStatus -ProjectRoot $publicRoot
+    Assert-True (($formatterStatus.diagnostics -join '; ') -match 'Prettier.*\.ai-rules/' -and $formatterStatus.available -eq $overrideStatus.available) 'shared status must warn without changing verified availability when the project formatter can scan installed rules'
+    Assert-True ((Get-FixtureSnapshot $publicRoot) -eq $formatterSnapshot -and (Get-FixtureSnapshot $releaseRoot) -eq $releaseSnapshot) 'formatter diagnosis must preserve project files and immutable release'
+    Write-FixtureText (Join-Path $publicRoot '.prettierignore') "/.ai-rules/`n/.agents/`n"
+    $excludedStatus = Get-AekSharedProjectStatus -ProjectRoot $publicRoot
+    Assert-True (($excludedStatus.diagnostics -join '; ') -notmatch 'Prettier') 'explicit project exclusions must remove the formatter warning'
+
     $quarantine = Join-Path $tempRoot 'temporarily-unavailable-release'
     Move-Item -LiteralPath $releaseRoot -Destination $quarantine
     $missingStatus = Get-AekSharedProjectStatus -ProjectRoot $projectRoot

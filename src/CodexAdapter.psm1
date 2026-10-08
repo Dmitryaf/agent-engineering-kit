@@ -3,6 +3,7 @@ Import-Module (Join-Path $PSScriptRoot 'PathsAndHashing.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot 'Catalog.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot 'GitState.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot 'PublicRepository.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Diagnostics.psm1') -ErrorAction Stop
 
 $aekBlockStart = '<!-- AEK SHARED BEGIN -->'
 $aekBlockEnd = '<!-- AEK SHARED END -->'
@@ -185,6 +186,7 @@ function Get-AekSharedProjectStatus {
         }
         $local = Get-AiRulesSafePath -BasePath $root -ChildPath $config.localRules -Label 'local context'
         if (-not (Test-Path -LiteralPath $local -PathType Leaf)) { $result.diagnostics += 'Local rules missing; preserve or create project-owned context explicitly.' }
+        $result.diagnostics += @(Get-AiRulesProjectToolWarnings -ProjectRoot $root)
         if ('public-repository' -in @($config.profiles)) {
             $publication = Get-AiRulesPublicRepositoryState -ProjectRoot $root
             $result.privateContext = $publication.PrivateContext

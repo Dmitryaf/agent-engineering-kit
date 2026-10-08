@@ -158,6 +158,34 @@ function Get-AiRulesLockSnapshotResults {
     return @($results)
 }
 
+function Get-AiRulesProjectToolWarnings {
+    param([Parameter(Mandatory = $true)][string]$ProjectRoot)
+
+    $packagePath = Get-AiRulesSafePath -BasePath $ProjectRoot -ChildPath 'package.json' -Label 'project tool configuration'
+    if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) { return @() }
+    try { $package = Get-Content -LiteralPath $packagePath -Raw -Encoding UTF8 | ConvertFrom-Json }
+    catch { return @('Не удалось проверить совместимость инструментов проекта: package.json не читается как JSON.') }
+    if ($null -eq $package -or $null -eq $package.PSObject.Properties['scripts'] -or $null -eq $package.scripts) { return @() }
+    $rootScan = @($package.scripts.PSObject.Properties | Where-Object { [string]$_.Value -match '(?i)\bprettier(?:\.cmd)?\s+(?:(?:--check|--write)\s+)?\.(?:\s|$)' })
+    if ($rootScan.Count -eq 0) { return @() }
+
+    $ignorePath = Get-AiRulesSafePath -BasePath $ProjectRoot -ChildPath '.prettierignore' -Label 'project formatter exclusions'
+    $patterns = if (Test-Path -LiteralPath $ignorePath -PathType Leaf) {
+        @(Get-Content -LiteralPath $ignorePath -Encoding UTF8 | ForEach-Object { $_.Trim().Replace('\', '/') } | Where-Object { $_ -and -not $_.StartsWith('#') })
+    } else { @() }
+    $warnings = [System.Collections.Generic.List[string]]::new()
+    foreach ($runtime in @('.ai-rules', '.agents', '.agent/releases')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $ProjectRoot $runtime))) { continue }
+        # Only an explicit directory exclusion without negation is confirmed here.
+        # Other glob/config semantics require the actual project formatter check.
+        $excluded = @($patterns | Where-Object { $_.TrimStart('/').TrimEnd('/') -eq $runtime }).Count -gt 0
+        if (-not $excluded -or @($patterns | Where-Object { $_.StartsWith('!') }).Count -gt 0) {
+            $warnings.Add("Корневой Prettier может проверять $runtime/: явное исключение не подтверждено. Проверь обычную команду и исключения проекта; не форматируй закреплённые файлы Kit. Git ignore этого не гарантирует.")
+        }
+    }
+    return @($warnings)
+}
+
 function Get-AiRulesStatusAssessment {
     param([Parameter(Mandatory = $true)]$ProjectState)
 
@@ -170,6 +198,8 @@ function Get-AiRulesStatusAssessment {
     if (-not [string]::IsNullOrWhiteSpace($ProjectState.ManifestError)) {
         return [pscustomobject]@{ State = 'inconsistent'; Diagnostics = @($ProjectState.ManifestError); Warnings = @() }
     }
+
+    foreach ($warning in @(Get-AiRulesProjectToolWarnings -ProjectRoot $ProjectState.ProjectRoot)) { $warnings.Add($warning) }
 
     $manifest = $ProjectState.Manifest
     if ($manifest.schemaVersion -ne '0.2') { $diagnostics.Add("неподдерживаемая schemaVersion в manifest.json: $($manifest.schemaVersion).") }
@@ -259,5 +289,6 @@ Export-ModuleMember -Function @(
     'Get-AiRulesAgentRouteState',
     'Get-AiRulesRulesetConsistencyResults',
     'Get-AiRulesLockSnapshotResults',
-    'Get-AiRulesStatusAssessment'
+    'Get-AiRulesStatusAssessment',
+    'Get-AiRulesProjectToolWarnings'
 )
