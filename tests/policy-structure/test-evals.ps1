@@ -35,7 +35,7 @@ foreach ($control in @($controlsDocument.controls)) {
 }
 
 $caseFiles = @(Get-ChildItem -LiteralPath (Join-Path $hubRoot 'evals/cases') -File -Filter '*.json' | Sort-Object Name)
-Assert-True ($caseFiles.Count -eq 44) 'exactly forty-four representative cases are required'
+Assert-True ($caseFiles.Count -eq 48) 'exactly forty-eight representative cases are required'
 $caseIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $positiveCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $negativeCoverage = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)

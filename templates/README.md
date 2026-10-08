@@ -35,6 +35,7 @@
 - [`DECISION.md`](DECISION.md) — необязательный подробный ADR с совместимым YAML front matter версии 1;
 - [`DECISIONS.md`](DECISIONS.md) — короткая карта действующих решений в одном файле по [правилу документации](../rules/DOCUMENTATION.md#карта-значимых-решений), без обязательной миграции старых записей;
 - [`RESEARCH.md`](RESEARCH.md) — проверяемое исследование;
+- [`DEVELOPMENT_ERRORS.md`](DEVELOPMENT_ERRORS.md) — необязательный журнал существенных проблем с отдельными статусами дефекта и меры для Kit;
 - [`PROJECT_KNOWLEDGE.md`](PROJECT_KNOWLEDGE.md) — устойчивые знания о проекте;
 - [`SESSION_CONTEXT.md`](SESSION_CONTEXT.md) — временная передача контекста.
 - [`TASK_CONTRACT.md`](TASK_CONTRACT.md) — границы и приёмка одной параллельной подзадачи.
