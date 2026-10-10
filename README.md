@@ -1,6 +1,6 @@
 # Agent Engineering Kit
 
-Agent Engineering Kit gives AI coding agents a compact, versioned set of engineering rules for working in real repositories. It helps agents preserve task scope, use evidence, respect project boundaries, and choose checks that observe the intended result.
+Agent Engineering Kit reduces repeated setup and explanations when starting and developing software projects. It combines a project bootstrap, optional tested configurations, and compact, versioned engineering rules to keep code, design and project context consistent.
 
 Connect the kit once, then keep working in your project as usual. The agent reads only the rules relevant to the current task.
 
@@ -50,15 +50,15 @@ If internal files are already tracked, preview the transition and install local 
 
 These commands preserve the index, history and local files. They provide a separate instruction for untracking runtime files after saving unique rules and obtaining the owner's permission. Previously published files remain in old commits. See [private context and restoration](sync/README.md#публичный-проект-и-private-project-context) for setup and migration details.
 
-For a new product, start with a small architecture before implementing its first scenario:
+For a new project, start directly with its idea, first scenario and constraints:
 
 ```powershell
 .\ai-rules.ps1 prompt bootstrap -ProjectRoot C:\path\to\project
 ```
 
-Paste the prompt with your goal and first scenario. The agent chooses where code belongs, creates only the needed parts, and checks the important dependency boundaries. Connecting an existing project does not restructure its code.
+The agent chooses an appropriate scale and technology, explains important choices, and shows a plan for your approval. It then builds the first complete scenario, applies only useful checks and settings, and leaves short instructions for continuing. Connecting the kit can be part of this plan; a separate connection interview is unnecessary. A lasting utility can remain three files. An application, service, mobile product, game or library can use its native conventions even without a kit example. Connecting an existing project does not restructure its code.
 
-For substantial new UI or a visual redesign, ask the agent to choose a visual direction before implementation: product context, references, distinct options, then a short design contract. Small fixes and features within an established design system do not restart discovery; connecting the kit does not redesign existing projects.
+For substantial new UI or a visual redesign, choose a composition for the audience and main scenario, then keep a short visual contract. References and alternatives help when the choice is uncertain; there are no quotas or universal visual styles. Small fixes and features within an established design system do not restart discovery; connecting the kit does not redesign existing projects.
 
 For a deep project audit later, generate a dedicated prompt:
 
@@ -72,7 +72,7 @@ To learn how a project works through code walkthroughs and practical checks:
 .\ai-rules.ps1 prompt study -ProjectRoot C:\path\to\project
 ```
 
-Study sessions track explored areas and demonstrated understanding separately. Significant decisions are maintained as a regular project practice, with a short, readable map of current choices and their reasons. Temporary audits, research and delivery evidence live separately and are reviewed when the work ends.
+Study sessions track explored areas and demonstrated understanding separately. Keep significant decisions and their reasons in one existing place; separate maps and ADRs are optional. Temporary audits, research and delivery evidence live separately and are reviewed when the work ends.
 
 For a large task with independent parts, generate a prompt for Codex:
 
@@ -96,7 +96,7 @@ If they look correct, apply them:
 .\ai-rules.ps1 update -ProjectRoot C:\path\to\project -Apply
 ```
 
-Initial `connect` and `init` create the local setup, including public-profile exclusions. Rule updates require `-Apply`; the kit preserves manually changed rules and does not run `commit`, `push`, or publishing commands.
+Initial `connect` and `init` create the local setup, including public-profile exclusions. Optional [technical materials](templates/README.md#технические-материалы) provide starting configurations for Vue/Vite and a Node service; they are not full application templates, and rule updates never apply them to project code. Rule updates require `-Apply`; the kit preserves manually changed rules and does not run `commit`, `push`, or publishing commands.
 
 ## Kit development
 

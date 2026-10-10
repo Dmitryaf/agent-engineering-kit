@@ -71,7 +71,7 @@ Agent Engineering Kit
   prompt parallel -ProjectRoot ПУТЬ
                            Подготовить запрос для параллельной задачи.
   prompt bootstrap -ProjectRoot ПУТЬ
-                           Выбрать первоначальную архитектуру нового проекта.
+                             Подготовить основу и первый работающий сценарий проекта.
   connect -ProjectRoot ПУТЬ
                            Подготовить проект и показать изменения.
   connect -ProjectRoot ПУТЬ -Apply
