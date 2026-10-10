@@ -34,6 +34,14 @@ if ($quality -notmatch 'ожидание `expect` < лимит теста < ли
 if ($learningProfile -notmatch 'устойчивой частью' -or $learningProfile -notmatch 'разового изучения') { throw 'Learning profile must describe a stable project property rather than a task workflow.' }
 if ($readme -match '## Detailed connection workflow|## Synchronization states|## Repository structure') { throw 'Public README must remain a short external entry point.' }
 
+# A persistent project may stay small; platform examples do not select architecture.
+$bootstrap = Get-Content -LiteralPath (Join-Path $hubRoot 'workflows/PROJECT_BOOTSTRAP.md') -Raw -Encoding UTF8
+$product = Get-Content -LiteralPath (Join-Path $hubRoot 'rules/PRODUCT.md') -Raw -Encoding UTF8
+$discovery = Get-Content -LiteralPath (Join-Path $hubRoot 'workflows/VISUAL_DESIGN_DISCOVERY.md') -Raw -Encoding UTF8
+if ($architecture -match 'Выбери один стартовый архетип' -or $bootstrap -match 'Выбери один минимальный архетип') { throw 'Kit must not require choosing from a closed architecture list.' }
+if ($bootstrap -notmatch 'Если конкретная основа и план уже одобрены' -or $bootstrap -notmatch 'до зависимой реализации' -or $bootstrap -notmatch 'Для продукта без графического интерфейса') { throw 'Bootstrap must preserve plan approval, prior authorization and the headless design exemption.' }
+if ($product -match '4–6|минимум два' -or $discovery -match 'минимум 2|2–3 направления') { throw 'Visual selection must not impose reference or alternative quotas.' }
+
 # Routing metadata must preserve the action gates without making every read a workflow.
 $agents = Get-Content -LiteralPath (Join-Path $hubRoot 'templates/AGENTS.md') -Raw -Encoding UTF8
 $taskStart = $agents.IndexOf('Сначала прочитай запрос владельца')
