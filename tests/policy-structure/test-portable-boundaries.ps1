@@ -34,4 +34,65 @@ if ($quality -notmatch 'ожидание `expect` < лимит теста < ли
 if ($learningProfile -notmatch 'устойчивой частью' -or $learningProfile -notmatch 'разового изучения') { throw 'Learning profile must describe a stable project property rather than a task workflow.' }
 if ($readme -match '## Detailed connection workflow|## Synchronization states|## Repository structure') { throw 'Public README must remain a short external entry point.' }
 
-Write-Host 'Portable boundary tests passed: 18 assertions.' -ForegroundColor Green
+# Routing metadata must preserve the action gates without making every read a workflow.
+$agents = Get-Content -LiteralPath (Join-Path $hubRoot 'templates/AGENTS.md') -Raw -Encoding UTF8
+$taskStart = $agents.IndexOf('Сначала прочитай запрос владельца')
+$localRules = $agents.IndexOf('.ai-rules/RULESET.md')
+if ($taskStart -lt 0 -or $taskStart -ge $localRules) {
+    throw 'The task must establish context before the mandatory rule-reading sequence.'
+}
+$invariants = @(
+    'До планирования и изменений',
+    'Читай выбранный профиль целиком',
+    'Состав подключённых тем сам по себе не расширяет задачу'
+)
+foreach ($invariant in $invariants) {
+    if (-not $agents.Contains($invariant)) {
+        throw "Task-first routing must preserve: $invariant"
+    }
+}
+$routingCases = @(
+    @{
+        Topic = 'git-and-delivery'
+        Gates = @(
+            'До изменения веток, индекса или истории Git',
+            'внешней операцией',
+            'Обычное чтение git status и diff',
+            'границы полномочий CORE'
+        )
+    },
+    @{
+        Topic = 'product'
+        Gates = @(
+            'До существенного нового интерфейса или редизайна',
+            'малых правок',
+            'исключения продуктового правила'
+        )
+    },
+    @{
+        Topic = 'architecture-and-data'
+        Gates = @(
+            'локальный архитектурный контракт',
+            'первоначальный выбор обязателен',
+            'миграций'
+        )
+    },
+    @{
+        Topic = 'security-and-privacy'
+        Gates = @(
+            'доступом',
+            'чувствительными данными',
+            'пропорционально риску',
+            'не отменяет обязательств выбранного профиля'
+        )
+    }
+)
+foreach ($scenario in $routingCases) {
+    $condition = [string]$catalog.topics.($scenario.Topic).readWhen
+    foreach ($gate in $scenario.Gates) {
+        if (-not $condition.Contains($gate)) {
+            throw "Routing for $($scenario.Topic) lost its boundary: $gate"
+        }
+    }
+}
+Write-Host 'Portable boundary tests passed, including task-first routing and preserved action gates.' -ForegroundColor Green
