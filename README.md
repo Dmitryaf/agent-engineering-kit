@@ -1,115 +1,59 @@
 # Agent Engineering Kit
 
-Agent Engineering Kit reduces repeated setup and explanations when starting and developing software projects. It combines a project bootstrap, optional tested configurations, and compact, versioned engineering rules to keep code, design and project context consistent.
+Небольшой набор личных предпочтений для Codex и пример проектных инструкций. Помогает не повторять требования к работе и сохранять особенности проекта между сессиями.
 
-Connect the kit once, then keep working in your project as usual. The agent reads only the rules relevant to the current task.
+Для использования нужны только Markdown-файлы: без подключения профилей, синхронизации, PowerShell и дополнительных служб. Kit не задаёт стек или архитектуру.
 
-## Install
+## Как пользоваться
 
-You need Git and Windows PowerShell 5.1 or PowerShell 7.
+**Личные предпочтения.** Откройте [personal/AGENTS.md](personal/AGENTS.md). Место глобальных инструкций Codex — `AGENTS.md` в `CODEX_HOME` (по умолчанию `~/.codex`). На Windows это обычно `.codex` в домашнем каталоге пользователя.
 
-```powershell
-git clone https://github.com/Dmitryaf/agent-engineering-kit.git
-Set-Location agent-engineering-kit
-```
+Если глобального файла ещё нет, создайте его обычным текстовым редактором из этого образца. Если он существует, сначала сохраните резервную копию, сравните тексты и объедините совпадающие пункты по смыслу. Не дописывайте весь образец вторым блоком и не заменяйте неизвестные пользовательские инструкции. Проверьте также `AGENTS.override.md`: он может перекрывать обычный файл. Изменения применяйте в новой сессии; репозиторий ничего не устанавливает автоматически.
 
-## Connect a project
+**Существующий проект.** Откройте его в Codex и поставьте задачу. Сохраняйте действующий `AGENTS.md`, команды и решения. Старое подключение Kit можно оставить; порядок необязательного перехода — в [MIGRATION.md](MIGRATION.md).
 
-Run this command from the hub folder and provide the path to your project:
+**Новый проект.** Начните с задачи. Когда появились устойчивые команды и ограничения, запишите их в короткий проектный `AGENTS.md`; [пример](examples/project/AGENTS.md) помогает выбрать содержание. Не копируйте README и не создавайте пустые карты или журналы. Важное решение можно сохранить несколькими строками в существующем документе. Для одноразового скрипта отдельные проектные инструкции могут не понадобиться.
 
-```powershell
-.\ai-rules.ps1 prompt connect -ProjectRoot C:\path\to\project
-```
+**Skills.** Добавляйте навык только для особого повторяемого процесса, которому недостаточно нескольких строк. В Kit готовых навыков нет. Обычные планирование, разработка, проверка и работа с Git не требуют собственного Skill.
 
-Copy the generated prompt into the AI agent working on that project. The agent will:
+## Как Codex читает инструкции
 
-1. inspect the project;
-2. select only the relevant rules;
-3. show you the proposed changes;
-4. wait for your approval;
-5. connect the rules and verify the result.
+Codex сначала учитывает глобальные инструкции, затем проектные — от корня репозитория к рабочему каталогу. Более близкие инструкции уточняют предыдущие, сохраняя приоритет системных ограничений и явной задачи. В каталоге выбирается один файл: `AGENTS.override.md`, затем `AGENTS.md`, затем настроенные запасные имена. Вне репозитория проверяется текущий каталог. Лимит проектного контекста по умолчанию — 32 KiB; настройка называется `project_doc_max_bytes`. Ссылка в тексте не означает автоматическую загрузку документа. [Документация Codex](https://developers.openai.com/codex/guides/agents-md/).
 
-Then return to your normal project work. You do not need to learn how the kit works or select rule files manually.
+Файл в `personal/` — источник для установки, а не автоматически глобальные инструкции. Корневой [AGENTS.md](AGENTS.md) относится к сопровождению самого Kit. Ни один из образцов не требует читать каталог общих правил.
 
-For a public project, select `public-repository`. The kit keeps three things separate:
+Навык имеет обычный `SKILL.md` с YAML-полями `name` и `description`. Codex обнаруживает проектные навыки в `.agents/skills` и пользовательские в `~/.agents/skills`; тело навыка читает при его применении. Навык можно назвать явно, либо Codex выберет его по описанию. [Спецификация Agent Skills](https://agentskills.io/specification), [поддержка в Codex](https://developers.openai.com/codex/skills/).
 
-```text
-public repository       → code and documentation for external readers
-local agent runtime     → AGENTS.md + .ai-rules/
-Private Project Context → private, versioned internal documents and unique rules
-```
+## Почему такая основа
 
-Runtime files are excluded locally through Git's `info/exclude`; the public `.gitignore` is unchanged. A fresh clone can connect the kit again. Restore unique project rules from your chosen private source; ignored files alone are not a backup. Private repositories can keep the existing tracked model.
+| Подход | Решение для Kit |
+| --- | --- |
+| [Обычный AGENTS.md](https://agents.md/) | Достаточен для личных предпочтений и короткого контекста проекта. Выбран основой. |
+| [Agent Skills](https://agentskills.io/specification) | Подходит для отдельных повторяемых процедур; обязательный набор не нужен. |
+| [Agent OS v3](https://github.com/buildermethods/agent-os/blob/main/CHANGELOG.md) | Отказался от собственных этапов реализации и координации, но сохраняет стандарты, индексы, профили и их доставку. Для нашего объёма это лишняя система; её код не используется. |
 
-If internal files are already tracked, preview the transition and install local exclusions:
+Прежние универсальные правила, профили, процессы, генераторы, синхронизация и технические шаблоны убраны. Личные предпочтения остались коротким текстом; особенности и принятые решения принадлежат каждому проекту.
 
-```powershell
-.\ai-rules.ps1 local-only -ProjectRoot C:\path\to\project
-.\ai-rules.ps1 local-only -ProjectRoot C:\path\to\project -Apply
-```
+Для Vue есть официальный [create-vue](https://vuejs.org/guide/quick-start.html) с выбором TypeScript, тестов и линтера. Прежний Node-пример сочетал обычные настройки TypeScript, ESLint и [встроенный test runner](https://nodejs.org/api/test.html), плюс частный пример ограничения импортов. Поддержка закреплённых версий и тестов этих конфигураций не оправдана подтверждённым преимуществом; подходящие настройки выбираются в самом проекте.
 
-These commands preserve the index, history and local files. They provide a separate instruction for untracking runtime files after saving unique rules and obtaining the owner's permission. Previously published files remain in old commits. See [private context and restoration](sync/README.md#публичный-проект-и-private-project-context) for setup and migration details.
+Сокращение обязательных инструкций и сопровождения — цель этого изменения. Оно не доказывает ускорение разработки или повышение качества решений модели.
 
-For a new project, start directly with its idea, first scenario and constraints:
+## Три примера
 
-```powershell
-.\ai-rules.ps1 prompt bootstrap -ProjectRoot C:\path\to\project
-```
+- **Небольшой Python-скрипт:** глобальные предпочтения и задача; проектный файл только при полезном устойчивом контексте. Нет обязательного выбора слоёв, визуального исследования или документов.
+- **Развитие существующего приложения:** проектный `AGENTS.md` ведёт к действующим командам, ограничениям данных и решениям нужной области. Старые локальные материалы сохраняются; их доступность проверяется отдельно от наличия Kit.
+- **Игра Roblox:** те же личные предпочтения, затем реальные ограничения игры и платформы. Структура выбирается для Roblox; каталоги и настройки Vue или Node не навязываются.
 
-The agent chooses an appropriate scale and technology, explains important choices, and shows a plan for your approval. It then builds the first complete scenario, applies only useful checks and settings, and leaves short instructions for continuing. Connecting the kit can be part of this plan; a separate connection interview is unnecessary. A lasting utility can remain three files. An application, service, mobile product, game or library can use its native conventions even without a kit example. Connecting an existing project does not restructure its code.
+Это разбор маршрутов инструкций, а не результаты модельных запусков.
 
-For substantial new UI or a visual redesign, choose a composition for the audience and main scenario, then keep a short visual contract. References and alternatives help when the choice is uncertain; there are no quotas or universal visual styles. Small fixes and features within an established design system do not restart discovery; connecting the kit does not redesign existing projects.
+## Проверка самого репозитория
 
-For a deep project audit later, generate a dedicated prompt:
+Для изменения Kit достаточно Python 3.10+ и Git:
 
-```powershell
-.\ai-rules.ps1 prompt deep-audit -ProjectRoot C:\path\to\project
-```
-
-To learn how a project works through code walkthroughs and practical checks:
-
-```powershell
-.\ai-rules.ps1 prompt study -ProjectRoot C:\path\to\project
-```
-
-Study sessions track explored areas and demonstrated understanding separately. Keep significant decisions and their reasons in one existing place; separate maps and ADRs are optional. Temporary audits, research and delivery evidence live separately and are reviewed when the work ends.
-
-For a large task with independent parts, generate a prompt for Codex:
-
-```powershell
-.\ai-rules.ps1 prompt parallel -ProjectRoot C:\path\to\project
-```
-
-Paste the prompt and your task into Codex. It will assess whether parallel work helps, give each writer a bounded task and separate workspace, and assign one owner to integrate and verify the result. Ordinary tasks continue as before.
-
-## Update rules
-
-Preview the available changes:
-
-```powershell
-.\ai-rules.ps1 update -ProjectRoot C:\path\to\project
-```
-
-If they look correct, apply them:
-
-```powershell
-.\ai-rules.ps1 update -ProjectRoot C:\path\to\project -Apply
-```
-
-Initial `connect` and `init` create the local setup, including public-profile exclusions. Optional [technical materials](templates/README.md#технические-материалы) provide starting configurations for Vue/Vite and a Node service; they are not full application templates, and rule updates never apply them to project code. Rule updates require `-Apply`; the kit preserves manually changed rules and does not run `commit`, `push`, or publishing commands.
-
-## Kit development
-
-An experimental shared installation for new Codex project connections is available in [Phase 1](hub/SHARED_INSTALL.md). The default snapshot path above remains supported.
-
-The architecture and low-level commands are documented in [`hub/ARCHITECTURE.md`](hub/ARCHITECTURE.md) and [`sync/README.md`](sync/README.md). Contribution and security guidance is available in [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`.github/SECURITY.md`](.github/SECURITY.md).
-
-[Visual Design Discovery](workflows/VISUAL_DESIGN_DISCOVERY.md) can be read directly from the hub or explicitly selected with `-Topics visual-design-discovery`.
-
-The verified minimum environment is Git with Windows PowerShell 5.1. Automated checks also cover `pwsh` on Windows and, experimentally, on Ubuntu. Linux support is not yet declared.
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/check-hub.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/test-tooling.ps1
+```sh
+python scripts/check.py
 git diff --check
+git status --short
 ```
+
+Проверка читает файлы, проверяет локальные ссылки и отсутствие старой цепочки в образцах. Python не нужен для использования инструкций. Правила участия — в [CONTRIBUTING.md](CONTRIBUTING.md), лицензия — [MIT](LICENSE).
