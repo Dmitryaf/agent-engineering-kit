@@ -1,9 +1,0 @@
-{
-  "schemaVersion": "0.2",
-  "source": {
-    "repository": "agent-engineering-kit",
-    "revision": null
-  },
-  "topics": [],
-  "profiles": ["standard-product"]
-}
