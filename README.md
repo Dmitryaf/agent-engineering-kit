@@ -1,54 +1,31 @@
 # Agent Engineering Kit
 
-Небольшой набор личных предпочтений для Codex и пример проектных инструкций. Помогает не повторять требования к работе и сохранять особенности проекта между сессиями.
+Engineering guidelines for Codex: short everyday instructions and focused skills for data safety, code changes, and user interfaces.
 
-Для использования нужны только Markdown-файлы: без подключения профилей, синхронизации, PowerShell и дополнительных служб. Kit не задаёт стек или архитектуру.
+## Get started
 
-## Как пользоваться
+1. Open [personal/AGENTS.md](personal/AGENTS.md) and adapt the guidelines to your workflow. Save them in `AGENTS.md` under `CODEX_HOME` (default: `~/.codex`). If you already have global instructions, back them up and merge the relevant guidelines. Check for an `AGENTS.override.md` file, which takes precedence.
+2. Copy the skill folders you need from `.agents/skills/` to `~/.agents/skills/` for use across projects, or to a project's `.agents/skills/` for that project only. Compare existing folders before copying; keep one copy of each skill in locations visible to Codex.
+3. Use [examples/project/AGENTS.md](examples/project/AGENTS.md) for a project's purpose, run and check commands, constraints, and links to relevant decisions. Keep existing project instructions.
+4. Start a new Codex session. Check the skill selector for the names below; CLI and IDE users can also use `/skills`. If a skill is missing, check its location and whether it is disabled.
 
-**Личные предпочтения.** Откройте [personal/AGENTS.md](personal/AGENTS.md). Место глобальных инструкций Codex — `AGENTS.md` в `CODEX_HOME` (по умолчанию `~/.codex`). На Windows это обычно `.codex` в домашнем каталоге пользователя.
+The instructions are written in Russian. Adapt them to your language and project. No installation scripts or extra tools are required.
 
-Если глобального файла ещё нет, создайте его обычным текстовым редактором из этого образца. Если он существует, сначала сохраните резервную копию, сравните тексты и объедините совпадающие пункты по смыслу. Не дописывайте весь образец вторым блоком и не заменяйте неизвестные пользовательские инструкции. Проверьте также `AGENTS.override.md`: он может перекрывать обычный файл. Изменения применяйте в новой сессии; репозиторий ничего не устанавливает автоматически.
+## Choose a skill
 
-**Существующий проект.** Откройте его в Codex и поставьте задачу. Сохраняйте действующий `AGENTS.md`, команды и решения. Старое подключение Kit можно оставить; порядок необязательного перехода — в [MIGRATION.md](MIGRATION.md).
-
-**Новый проект.** Начните с задачи. Когда появились устойчивые команды и ограничения, запишите их в короткий проектный `AGENTS.md`; [пример](examples/project/AGENTS.md) помогает выбрать содержание. Не копируйте README и не создавайте пустые карты или журналы. Важное решение можно сохранить несколькими строками в существующем документе. Для одноразового скрипта отдельные проектные инструкции могут не понадобиться.
-
-**Skills.** Добавляйте навык только для особого повторяемого процесса, которому недостаточно нескольких строк. В Kit готовых навыков нет. Обычные планирование, разработка, проверка и работа с Git не требуют собственного Skill.
-
-## Как Codex читает инструкции
-
-Codex сначала учитывает глобальные инструкции, затем проектные — от корня репозитория к рабочему каталогу. Более близкие инструкции уточняют предыдущие, сохраняя приоритет системных ограничений и явной задачи. В каталоге выбирается один файл: `AGENTS.override.md`, затем `AGENTS.md`, затем настроенные запасные имена. Вне репозитория проверяется текущий каталог. Лимит проектного контекста по умолчанию — 32 KiB; настройка называется `project_doc_max_bytes`. Ссылка в тексте не означает автоматическую загрузку документа. [Документация Codex](https://developers.openai.com/codex/guides/agents-md/).
-
-Файл в `personal/` — источник для установки, а не автоматически глобальные инструкции. Корневой [AGENTS.md](AGENTS.md) относится к сопровождению самого Kit. Ни один из образцов не требует читать каталог общих правил.
-
-Навык имеет обычный `SKILL.md` с YAML-полями `name` и `description`. Codex обнаруживает проектные навыки в `.agents/skills` и пользовательские в `~/.agents/skills`; тело навыка читает при его применении. Навык можно назвать явно, либо Codex выберет его по описанию. [Спецификация Agent Skills](https://agentskills.io/specification), [поддержка в Codex](https://developers.openai.com/codex/skills/).
-
-## Почему такая основа
-
-| Подход | Решение для Kit |
+| Skill | Use it for |
 | --- | --- |
-| [Обычный AGENTS.md](https://agents.md/) | Достаточен для личных предпочтений и короткого контекста проекта. Выбран основой. |
-| [Agent Skills](https://agentskills.io/specification) | Подходит для отдельных повторяемых процедур; обязательный набор не нужен. |
-| [Agent OS v3](https://github.com/buildermethods/agent-os/blob/main/CHANGELOG.md) | Отказался от собственных этапов реализации и координации, но сохраняет стандарты, индексы, профили и их доставку. Для нашего объёма это лишняя система; её код не используется. |
+| [aek-data-safety](.agents/skills/aek-data-safety/SKILL.md) | Storage, import/export, migrations, sync, retries, and recovery. |
+| [aek-change-safety](.agents/skills/aek-change-safety/SKILL.md) | Module boundaries, public contracts, behavior replacement or removal, and recurring defects. |
+| [aek-user-interface](.agents/skills/aek-user-interface/SKILL.md) | New or substantial GUI changes, user flows, action states, and layout. |
 
-Прежние универсальные правила, профили, процессы, генераторы, синхронизация и технические шаблоны убраны. Личные предпочтения остались коротким текстом; особенности и принятые решения принадлежат каждому проекту.
+Codex reads global and project `AGENTS.md` instructions at the start of a session. It first sees skill names and descriptions, then reads a skill's full instructions when it selects that skill. A link alone does not load a file. Automatic skill selection is not guaranteed: select a skill in the app or name it explicitly, for example `$aek-data-safety Change the export format`. Skills keep project-specific formats and decisions in the project; they do not replace them. See the official [AGENTS.md guide](https://learn.chatgpt.com/docs/agent-configuration/agents-md) and [skills guide](https://learn.chatgpt.com/docs/build-skills).
 
-Для Vue есть официальный [create-vue](https://vuejs.org/guide/quick-start.html) с выбором TypeScript, тестов и линтера. Прежний Node-пример сочетал обычные настройки TypeScript, ESLint и [встроенный test runner](https://nodejs.org/api/test.html), плюс частный пример ограничения импортов. Поддержка закреплённых версий и тестов этих конфигураций не оправдана подтверждённым преимуществом; подходящие настройки выбираются в самом проекте.
+For projects using an earlier version of Kit, see [MIGRATION.md](MIGRATION.md).
 
-Сокращение обязательных инструкций и сопровождения — цель этого изменения. Оно не доказывает ускорение разработки или повышение качества решений модели.
+## Contributing
 
-## Три примера
-
-- **Небольшой Python-скрипт:** глобальные предпочтения и задача; проектный файл только при полезном устойчивом контексте. Нет обязательного выбора слоёв, визуального исследования или документов.
-- **Развитие существующего приложения:** проектный `AGENTS.md` ведёт к действующим командам, ограничениям данных и решениям нужной области. Старые локальные материалы сохраняются; их доступность проверяется отдельно от наличия Kit.
-- **Игра Roblox:** те же личные предпочтения, затем реальные ограничения игры и платформы. Структура выбирается для Roblox; каталоги и настройки Vue или Node не навязываются.
-
-Это разбор маршрутов инструкций, а не результаты модельных запусков.
-
-## Проверка самого репозитория
-
-Для изменения Kit достаточно Python 3.10+ и Git:
+To check changes to this repository, use Python 3.10+ and Git:
 
 ```sh
 python scripts/check.py
@@ -56,4 +33,8 @@ git diff --check
 git status --short
 ```
 
-Проверка читает файлы, проверяет локальные ссылки и отсутствие старой цепочки в образцах. Python не нужен для использования инструкций. Правила участия — в [CONTRIBUTING.md](CONTRIBUTING.md), лицензия — [MIT](LICENSE).
+The script checks instruction files, minimal skill headers, local Markdown links, and possible private paths. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+## License
+
+[MIT](LICENSE).
