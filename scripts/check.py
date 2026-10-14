@@ -12,6 +12,7 @@ INSTRUCTIONS = (
     ".agents/skills/aek-data-safety/SKILL.md",
     ".agents/skills/aek-change-safety/SKILL.md",
     ".agents/skills/aek-user-interface/SKILL.md",
+    ".agents/skills/aek-parallel-work/SKILL.md",
 )
 
 
