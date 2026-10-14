@@ -1,6 +1,6 @@
 # Agent Engineering Kit
 
-Engineering guidelines for Codex: short everyday instructions and focused skills for data safety, code changes, and user interfaces.
+Engineering guidelines for Codex: short everyday instructions and focused skills for data safety, code changes, user interfaces, and parallel agent work.
 
 ## Get started
 
@@ -18,6 +18,7 @@ The instructions are written in Russian. Adapt them to your language and project
 | [aek-data-safety](.agents/skills/aek-data-safety/SKILL.md) | Storage, import/export, migrations, sync, retries, and recovery. |
 | [aek-change-safety](.agents/skills/aek-change-safety/SKILL.md) | Module boundaries, public contracts, behavior replacement or removal, and recurring defects. |
 | [aek-user-interface](.agents/skills/aek-user-interface/SKILL.md) | New or substantial GUI changes, user flows, action states, and layout. |
+| [aek-parallel-work](.agents/skills/aek-parallel-work/SKILL.md) | Independent subtasks, agent ownership, and validation after integration; skip small or tightly coupled work. |
 
 Codex reads global and project `AGENTS.md` instructions at the start of a session. It first sees skill names and descriptions, then reads a skill's full instructions when it selects that skill. A link alone does not load a file. Automatic skill selection is not guaranteed: select a skill in the app or name it explicitly, for example `$aek-data-safety Change the export format`. Skills keep project-specific formats and decisions in the project; they do not replace them. See the official [AGENTS.md guide](https://learn.chatgpt.com/docs/agent-configuration/agents-md) and [skills guide](https://learn.chatgpt.com/docs/build-skills).
 
